@@ -1,0 +1,104 @@
+
+======= max.yul (EVM) =======
+
+Pretty printed source:
+object "Runtime" {
+    code {
+        {
+            let x := 8
+            let y := 3
+            let z := max(x, y)
+            mstore(0x40, z)
+        }
+        function max(x, y) -> result
+        {
+            result := x
+            if lt(x, y) { result := y }
+        }
+    }
+}
+
+
+Binary representation:
+600a6008600390600f565b604052005b9190808310601b575b50565b909150905f601856
+
+Text representation:
+    /* "max.yul":301:310   */
+  tag_2
+    /* "max.yul":253:254   */
+  0x08
+    /* "max.yul":277:278   */
+  0x03
+    /* "max.yul":301:310   */
+  swap1
+  tag_1
+  jump	// in
+tag_2:
+    /* "max.yul":331:335   */
+  0x40
+    /* "max.yul":324:339   */
+  mstore
+    /* "max.yul":33:362   */
+  stop
+    /* "max.yul":51:218   */
+tag_1:
+  swap2
+  swap1
+    /* "max.yul":111:122   */
+  dup1
+  dup4
+    /* "max.yul":142:150   */
+  lt
+    /* "max.yul":139:203   */
+  tag_3
+  jumpi
+    /* "max.yul":93:218   */
+tag_4:
+    /* "max.yul":51:218   */
+  pop
+  jump	// out
+    /* "max.yul":151:203   */
+tag_3:
+    /* "max.yul":173:184   */
+  swap1
+  swap2
+  pop
+    /* "max.yul":151:203   */
+  swap1
+  0x00
+  jump(tag_4)
+
+00000000: PUSH1 0xa     //  tag_2 
+00000002: PUSH1 0x8
+00000004: PUSH1 0x3
+00000006: SWAP1
+00000007: PUSH1 0xf     //  tag_1 
+00000009: JUMP
+
+0000000a: JUMPDEST      //  tag_2 
+0000000b: PUSH1 0x40
+0000000d: MSTORE
+0000000e: STOP
+
+0000000f: JUMPDEST      //  tag_1 
+00000010: SWAP2
+00000011: SWAP1
+00000012: DUP1
+00000013: DUP4
+00000014: LT
+00000015: PUSH1 0x1b
+00000017: JUMPI
+
+00000018: JUMPDEST      // tag_4 
+00000019: POP
+0000001a: JUMP
+
+0000001b: JUMPDEST      //  tag_ 3
+0000001c: SWAP1
+0000001d: SWAP2
+0000001e: POP
+0000001f: SWAP1
+00000020: PUSH0
+00000021: PUSH1 0x18
+00000023: JUMP
+
