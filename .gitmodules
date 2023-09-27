@@ -1,0 +1,6 @@
+[submodule "libs/evm-dafny"]
+	path = libs/evm-dafny
+	url = git@github.com:Consensys/evm-dafny.git
+[submodule "libs/evm-dafny/libs/DafnyCrypto2"]
+	path = libs/evm-dafny/libs/DafnyCrypto2
+	url = git@github.com:Consensys/DafnyCrypto.git
