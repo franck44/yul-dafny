@@ -4,6 +4,87 @@
 This repository contributes a shallow embedding of [Yul](https://docs.soliditylang.org/en/latest/yul.html) in [Dafny](https://github.com/dafny-lang/dafny).
 It defines the semantics of the source language, Yul, using a host language, Dafny, by translating Yul structures into Dafny structures.
 
+## What is Yul?
+
+Yul can be seen as structured EVM bytecode: it has control flow structures (`if`, `for`, `block`, etc) and functions.
+It does not provide a _stack_ as in the EVM, but rather _variables_ and _scopes_.
+As a result, it easier to read than EVM bytecode.
+
+The following example defines a function `max` and uses it to store (in memory) the largest of two values. 
+
+```solidity
+object "Runtime" {
+    code {
+        function max(x, y) -> result 
+        {
+            result := x
+            if lt(x, y) {
+                result := y 
+            } 
+        }
+        //  Main code
+        let x := 8
+        let y := 3
+        let z := max(x, y)
+        mstore(0x40, z)
+    }
+}
+```
+
+The builtin functions `lt`, `mstore` are part of the _EVM dialect_ of Yul.
+This dialect has a single variable/literal type which is `u256` (unsigned integers over 256 bits), so the type of all variables (`x`, `y`, `result`) is `u256`.
+Yul has been designed to be easy to translate into EVM bytecode (with a stack instead of variables, and jumps instead to implement control structures).
+It is also a good target for formal verification.
+
+## Semantics of Yul
+
+An informal semantics is defined in the [Yul documentation](https://docs.soliditylang.org/en/latest/yul.html#formal-specification).
+There are several _formal semantics_ of Yul (see resources below), all them being _deep embeddings_ in the sense that the formalisation provides:
+- the syntax of Yul, and
+- an operational or denotational semantics of the language.
+
+In this project we propose a _shallow embedding_ a Yul into the (host) verification-friendly Dafny language.
+A shallow embedding re-uses the host language features (control structures, variables declaration, scopes) to equip the source language (Yul) with a formal 
+semantics that is inherited from the host (Dafny).
+
+For instance, the `max` function above can be translated into Dafny as:
+
+```dafny
+method Max(x: u256, y: u256, m: Memory.T) returns (result: u256, m': Memory.T)
+    ensures result == x || result == y
+    ensures result >= x && result >= y
+    ensures m' == m
+{
+    m' := m;            //  memory is not modified
+    result := x;        
+    if lt(x, y) > 0 {
+        result := y;
+    }
+}
+```
+The advantage of a shallow embedding is that it is usually easier to implement, and in our case, we can directly use the extra verification features of Dafny to provide some guarantees about the code (e.g. `ensures`).  
+
+## From Solidity to Yul
+
+Yul is an intermediate representation (IR) that can be compiled to EVM bytecode.
+The solidity compiler can generate Yul as an intermediate representation of Solidity code:
+
+```zsh
+> solc --ir file.sol >file.yul
+```
+
+The Yul code inb 'file.yul' can be compiled into EVM bytecode:
+```zsh
+> solc --yul file.yul >file.txt
+```
+
+
+
+
+
+# Examples
+
+The [examples folder](src/dafny/yul-verif-examples) contains examples of Yul to Dafny translation and verification.
 # Resources
 
 - [What is Yul?](https://www.quicknode.com/guides/ethereum-development/smart-contracts/what-is-yul)
