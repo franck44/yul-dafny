@@ -43,7 +43,7 @@ There are several _formal semantics_ of Yul (see resources below), all them bein
 - the syntax of Yul, and
 - an operational or denotational semantics of the language.
 
-In this project we propose a _shallow embedding_ a Yul into the (host) verification-friendly Dafny language.
+In this project we propose a _shallow embedding_ a Yul into the (host) verification-friendly language Dafny.
 A shallow embedding re-uses the host language features (control structures, variables declaration, scopes) to equip the source language (Yul) with a formal 
 semantics that is inherited from the host (Dafny).
 
@@ -62,6 +62,7 @@ method Max(x: u256, y: u256, m: Memory.T) returns (result: u256, m': Memory.T)
     }
 }
 ```
+The semantics of assignment, function declarations, `if` and variables' scopes is inherited from the Dafny semantics.
 The advantage of a shallow embedding is that it is usually easier to implement, and in our case, we can directly use the extra verification features of Dafny to provide some guarantees about the code (e.g. `ensures`).  
 
 ## From Solidity to Yul
@@ -73,14 +74,23 @@ The solidity compiler can generate Yul as an intermediate representation of Soli
 > solc --ir file.sol >file.yul
 ```
 
-The Yul code inb 'file.yul' can be compiled into EVM bytecode:
+The Yul code in 'file.yul' can be compiled into EVM bytecode:
 ```zsh
 > solc --yul file.yul >file.txt
 ```
 
+## Formal verification of Yul and EVM bytecode
+
+With a shallow embedding of Yul, we get the ability to prove some properties of Yul programs.
+We can leverage this feature to prove properties of EVM bytecode generated from Yul.
 
 
+An example is provided in [this folder](src/dafny/yul-bytecode-verif/max).
+The verification works as follow:
 
+- some properties are verified on the Yul code
+- we then compile the Yul code into EVM bytecode
+- we prove that the bytecode for each function (e.g. `max`) _simulates_ the Yul code.
 
 # Examples
 
