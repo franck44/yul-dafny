@@ -51,4 +51,13 @@ module maxYul {
     m' := mstore(0x40, z, m1);      //  memory store
   }
 
+  /**
+    *  Run the code.
+    */
+  method {:main} Test()
+  {
+    var m := Main(Memory.Create());
+    print Memory.ReadUint256(m, 0x40), "\n";
+  }
+
 }
