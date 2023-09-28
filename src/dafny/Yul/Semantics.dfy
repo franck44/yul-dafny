@@ -40,6 +40,17 @@ module Yul {
     ((x as nat + y as nat) % TWO_256) as u256
   }
 
+  /**
+    *   Multiplication modulo 2^256.
+    *   @param      x    
+    *   @param      y
+    *   @returns    x * y mod 2^256.
+    */
+  function mul(x: u256, y: u256): u256
+  {
+    ((x as nat * y as nat) % TWO_256) as u256
+  }
+
   //  Comparison operators.
 
   /**
