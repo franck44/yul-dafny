@@ -78,7 +78,10 @@ module Yul {
     *               is stored into 32 bytes ranging from address to address + 31.
     *     
     */
-  function mstore(address: u256, value: u256, m: Memory.T): Memory.T
+  function mstore(address: u256, value: u256, m: Memory.T): (m' :Memory.T)
+    requires Memory.Size(m) % 32 == 0
+    ensures Memory.Size(m') % 32 == 0
+    ensures Memory.Size(m') >= address as nat
   {
     //  Make sure memory is large enough.
     var m' := Memory.ExpandMem(m, address as nat, 32);
