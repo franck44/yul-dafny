@@ -47,6 +47,7 @@ module Yul {
     *   @returns    x * y mod 2^256.
     */
   function mul(x: u256, y: u256): u256
+    ensures x as nat * y as nat < TWO_256 ==> mul(x, y) == x * y 
   {
     ((x as nat * y as nat) % TWO_256) as u256
   }
@@ -59,7 +60,9 @@ module Yul {
     *   @param      y 
     *   @returns    1 if x < y and 0 otherwise.
     */
-  function lt(x: u256, y: u256): u256
+  function lt(x: u256, y: u256): (r: u256)
+    ensures r > 0 <==> x < y 
+    ensures r == 0 <==> x >= y 
   {
     if x < y then 1 else 0
   }
@@ -81,7 +84,7 @@ module Yul {
   function mstore(address: u256, value: u256, m: Memory.T): (m' :Memory.T)
     requires Memory.Size(m) % 32 == 0
     ensures Memory.Size(m') % 32 == 0
-    ensures Memory.Size(m') >= address as nat
+    ensures Memory.Size(m') >= address as nat + 32  
   {
     //  Make sure memory is large enough.
     var m' := Memory.ExpandMem(m, address as nat, 32);
