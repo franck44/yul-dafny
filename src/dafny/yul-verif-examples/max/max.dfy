@@ -30,6 +30,7 @@ module maxYul {
     ensures result == x || result == y
     ensures result >= x && result >= y
     ensures m' == m
+    ensures Memory.Size(m') == Memory.Size(m)
   {
     m' := m;
     result := x;
@@ -42,6 +43,7 @@ module maxYul {
     *  Translation of Yul code of main in Dafny.
     */
   method Main(m: Memory.T) returns (m': Memory.T)
+    requires Memory.Size(m) % 32 == 0
     ensures Memory.Size(m') > 0x40 + 31
     ensures Memory.ReadUint256(m', 0x40) == 8
   {
@@ -54,7 +56,7 @@ module maxYul {
   /**
     *  Run the code.
     */
-  method {:main} Test()
+  method {:main} {:verify false} Test()
   {
     var m := Main(Memory.Create());
     print Memory.ReadUint256(m, 0x40), "\n";

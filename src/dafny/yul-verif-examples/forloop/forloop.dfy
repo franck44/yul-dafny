@@ -25,36 +25,45 @@ module forLoopYul {
 
   /**
     *  Translation of Yul code of main in Dafny.
-    */
+    */ 
   method Main(m: Memory.T) returns (m': Memory.T)
     requires Memory.Size(m) % 32 == 0
-    ensures Memory.Size(m') > 31
-    // ensures Memory.ReadUint256(m', 0x40) == 8
+    ensures Memory.Size(m') >= 10 * 32 
   {
-    // var x := 8;                     //  let
-    // var y := 3;                     //  let
-    // var z, m1 := Max(x, y, m);      //  funcall. Returns result ans new memory.
-    // m' := mstore(0x40, z, m1);      //  memory store
     var x: u256 := 0;
     m' := m;
     while lt(x, 10) > 0 
         decreases 10 - x
-        invariant x <= 10
-        invariant x > 0 ==> Memory.Size(m') >= 32 as nat 
+        invariant x <= 10 
+        invariant x as nat * 32 < TWO_256
+        invariant mul(x, 32) == x * 32 
+        invariant Memory.Size(m') % 32 == 0
+        invariant x > 0 ==> Memory.Size(m') >= mul(x - 1, 32) as nat + 32    
     {
-        m' := mstore(x, mul(x, 0x1), m); 
+        m' := mstore(mul(x, 32), mul(x, 0x01), m'); 
+        assert Memory.Size(m') >= mul(x, 32) as nat + 32 ;  
+        assert Memory.Size(m') % 32 == 0;
         x := add(x, 1);
     }
-    assert Memory.Size(m') >= 32;
   }
 
   /**
     *  Run the code.
     */
-//   method {:main} Test()
-//   {
-//     var m := Main(Memory.Create());
-//     print Memory.ReadUint256(m, 0x40), "\n";
-//   }
+  method {:main} Test()
+  {
+    var m := Memory.Create();
+    assert Memory.Size(m) == 0;
+    var m' := Main(m);
+
+    assert Memory.Size(m') >= 32 * 10;
+
+    for i := 0 to 10
+        invariant Memory.Size(m') >=  32 *10
+    {
+        print "Memory[", i, "] = ", Memory.ReadUint256(m', i * 32), "\n";
+    }
+    
+  }
 
 }
