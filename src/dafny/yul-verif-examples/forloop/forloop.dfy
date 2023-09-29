@@ -57,7 +57,7 @@ module forLoopYul {
     for i := 0 to 10
         invariant Memory.Size(m') >=  32 *10
     {
-        print "Memory[", i, "] = ", Memory.ReadUint256(m', i * 32), "\n";
+        print "Memory[", 32 * i, "..", 32 * i + 31 ,"] = ", Memory.ReadUint256(m', i * 32), " (u256)\n";
     }
     
   }
