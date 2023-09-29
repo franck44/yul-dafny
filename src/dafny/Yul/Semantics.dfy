@@ -14,6 +14,7 @@
 
 include "../../../libs/evm-dafny/src/dafny/util/int.dfy"
 include "../../../libs/evm-dafny/src/dafny/core/memory.dfy"
+include "../../../libs/evm-dafny/src/dafny/bytecode.dfy"
 
 
 /**
@@ -26,6 +27,8 @@ module Yul {
 
   import opened Int
   import Memory
+  import Bytecode
+  import Word
 
   //  Arithmetic operators.
 
@@ -35,9 +38,20 @@ module Yul {
     *   @param      y
     *   @returns    x + y mod 2^256.
     */
-  function add(x: u256, y: u256): u256
+  function Add(x: u256, y: u256): u256
   {
     ((x as nat + y as nat) % TWO_256) as u256
+  }
+
+  /**
+    *   Subtraction modulo 2^256.
+    *   @param      x    
+    *   @param      y
+    *   @returns    x as int - y as int mod 2^256.
+    */
+  function Sub(x: u256, y: u256): u256
+  {
+    ((x as int - y as int) % TWO_256) as u256
   }
 
   /**
@@ -46,10 +60,79 @@ module Yul {
     *   @param      y
     *   @returns    x * y mod 2^256.
     */
-  function mul(x: u256, y: u256): u256
-    ensures x as nat * y as nat < TWO_256 ==> mul(x, y) == x * y 
+  function Mul(x: u256, y: u256): u256
+    ensures x as nat * y as nat < TWO_256 ==> Mul(x, y) == x * y
   {
     ((x as nat * y as nat) % TWO_256) as u256
+  }
+
+  /**
+    *   Division modulo 2^256.
+    *   @param      x    
+    *   @param      y
+    *   @returns    if y !=0 then x / y mod 2^256 else 0.
+    *   @note       Re-use helpers in the bytecode semantics.
+    */
+  function Div(x: u256, y: u256): u256
+    ensures y != 0  ==> Div(x, y) == x / y
+  {
+    Bytecode.DivWithZero(x, y)
+  }
+
+  /**
+    *   Signed integer Division modulo 2^256.
+    *   @param      x    
+    *   @param      y
+    *   @returns    if y !=0 then x / y for signed numbers (2-s complement) mod 2^256 else 0.
+    *   @note       We assume that the semantics in Yul is the same as in the EVM dialect. 
+    *               Use the EVM bytecode helpers.
+    */
+  function SDiv(x: u256, y: u256): u256
+    // ensures y > 0 && x > 0 ==> SDiv(x, y) == x / y
+  {
+    var lhs := Word.asI256(x);
+    var rhs := Word.asI256(y);
+    var res := Word.fromI256(Bytecode.SDivWithZero(lhs, rhs));
+    res
+  }
+
+  /**
+    *   Modulo with zero handling.
+    *   @param      x    
+    *   @param      y
+    *   @returns    if y !=0 then x % y else 0.
+    */
+  function Mod(x: u256, y: u256) : u256
+    ensures y != 0 ==> Mod(x, y) == x % y
+  {
+    if y == 0 then 0 as u256
+    else
+      (x % y) as u256
+  }
+
+  /**
+    *   Signed Modulo with zero handling.
+    *   @param      x    
+    *   @param      y
+    *   @returns    if y !=0 then x % y else 0.
+    */
+  function SModWithZero(x: u256, y: u256) : u256
+  {
+    var lhs := Word.asI256(x);
+    var rhs := Word.asI256(y);
+    var res := Word.fromI256(Bytecode.SModWithZero(lhs, rhs));
+    res
+  }
+
+  /**
+    *   Signed Modulo with zero handling.
+    *   @param      x    
+    *   @param      y
+    *   @returns    if y !=0 then x % y else 0.
+    */
+  function Exp(x: u256, y: u256) : u256
+  {
+    (MathUtils.Pow(x as nat, y as nat) % TWO_256) as u256
   }
 
   //  Comparison operators.
@@ -61,10 +144,61 @@ module Yul {
     *   @returns    1 if x < y and 0 otherwise.
     */
   function lt(x: u256, y: u256): (r: u256)
-    ensures r > 0 <==> x < y 
-    ensures r == 0 <==> x >= y 
+    ensures r > 0 <==> x < y
+    ensures r == 0 <==> x >= y
   {
     if x < y then 1 else 0
+  }
+
+  /**
+    *   Unsigned greater than.
+    *   @param      x   
+    *   @param      y 
+    *   @returns    1 if x < y and 0 otherwise.
+    */
+  function Gt(x: u256, y: u256): (r: u256)
+    ensures r > 0 <==> x > y
+    ensures r == 0 <==> x <= y
+  {
+    if x > y then 1 else 0
+  }
+
+  /**
+    *   Signed lower than.
+    *   @param      x   
+    *   @param      y 
+    *   @returns    1 if x as int < y as int and 0 otherwise.
+    */
+  function SLt(x: u256, y: u256): (r: u256)
+  {
+    var lhs := Word.asI256(x);
+    var rhs := Word.asI256(y);
+    if lhs < rhs then 1 else 0
+  }
+
+  /**
+    *   Signed greater than.
+    *   @param      x   
+    *   @param      y 
+    *   @returns    1 if x <as int  y as int and 0 otherwise.
+    */
+  function SGt(x: u256, y: u256): (r: u256)
+  {
+    var lhs := Word.asI256(x);
+    var rhs := Word.asI256(y);
+    if lhs > rhs then 1 else 0
+  }
+
+  //    Bitwise operators
+
+  /**
+    *   Bitwise not
+    *   @param      x    
+    *   @returns    not(x), every bit is flipped.
+    */
+  function Not(x: u256) : u256
+  {
+    (TWO_256 - 1 - x as nat) as u256
   }
 
   //  Memory operators.
@@ -84,7 +218,7 @@ module Yul {
   function mstore(address: u256, value: u256, m: Memory.T): (m' :Memory.T)
     requires Memory.Size(m) % 32 == 0
     ensures Memory.Size(m') % 32 == 0
-    ensures Memory.Size(m') >= address as nat + 32  
+    ensures Memory.Size(m') >= address as nat + 32
   {
     //  Make sure memory is large enough.
     var m' := Memory.ExpandMem(m, address as nat, 32);
