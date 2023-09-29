@@ -40,7 +40,7 @@ module MaxBytecodeVerification {
   const tag_4: u8 := 0x18
 
   /**
-    *  When a JUMP or JUMPI is executed we need to make sure the target location
+    *  When a JUMP or JUMPI is executed we need to make sure the target location 
     *  is a JUMPDEST.
     *  This axiom enforces it.
     */
@@ -52,6 +52,7 @@ module MaxBytecodeVerification {
 
   /**
     *  Translation of the of the Yul code in Dafny.
+    *   Use Dafny native operators.
     */
   method Max(x: u256, y: u256, m: Memory.T) returns (result: u256, m': Memory.T)
     ensures result == x || result == y
@@ -60,7 +61,7 @@ module MaxBytecodeVerification {
   {
     m' := m;
     result := x;
-    if lt(x, y) > 0 {
+    if x < y {
       result := y;
     }
   }
@@ -99,7 +100,7 @@ module MaxBytecodeVerification {
     ghost var s1 := ExecuteFromTag1(st);
     m' := m;                                          //  bytecode move
     result := x;                                      //  matching Yul move
-    if lt(x, y) > 0 {
+    if x < y {
       s' := ExecuteFromTag4(ExecuteFromTag3(s1));     //  bytecode move
       result := y;                                    //  matching Yul move
     } else {
@@ -111,6 +112,7 @@ module MaxBytecodeVerification {
     *  Translation of Yul code in Dafny.
     */
   method Main(m: Memory.T) returns (m': Memory.T)
+    requires Memory.Size(m) % 32 == 0
     ensures Memory.Size(m') > 0x40 + 31
     ensures Memory.ReadUint256(m', 0x40) == 8
   {
@@ -127,6 +129,7 @@ module MaxBytecodeVerification {
     requires st.Capacity() >= 5
     requires st.Operands() >= 0
     requires st.PC() == 0 as nat
+    requires Memory.Size(m) % 32 == 0
     requires st.evm.memory == m
 
     ensures s'.EXECUTING?

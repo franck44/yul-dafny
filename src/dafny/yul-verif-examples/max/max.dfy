@@ -40,6 +40,22 @@ module maxYul {
   }
 
   /**
+    *  Use Dafny native arithmetic and comparison operators.
+    */
+  method Max2(x: u256, y: u256, m: Memory.T) returns (result: u256, m': Memory.T)
+    ensures result == x || result == y
+    ensures result >= x && result >= y
+    ensures m' == m
+    ensures Memory.Size(m') == Memory.Size(m)
+  {
+    m' := m;
+    result := x;
+    if x < y {
+      result := y;
+    }
+  }
+
+  /**
     *  Translation of Yul code of main in Dafny.
     */
   method Main(m: Memory.T) returns (m': Memory.T)
