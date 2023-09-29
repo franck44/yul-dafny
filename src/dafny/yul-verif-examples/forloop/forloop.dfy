@@ -35,14 +35,10 @@ module forLoopYul {
     while lt(x, 10) > 0 
         decreases 10 - x
         invariant x <= 10 
-        invariant x as nat * 32 < TWO_256
-        invariant mul(x, 32) == x * 32 
         invariant Memory.Size(m') % 32 == 0
-        invariant x > 0 ==> Memory.Size(m') >= mul(x - 1, 32) as nat + 32    
+        invariant x > 0 ==> Memory.Size(m') >= x as nat * 32    
     {
         m' := mstore(mul(x, 32), mul(x, 0x01), m'); 
-        assert Memory.Size(m') >= mul(x, 32) as nat + 32 ;  
-        assert Memory.Size(m') % 32 == 0;
         x := add(x, 1);
     }
   }
@@ -50,7 +46,7 @@ module forLoopYul {
   /**
     *  Run the code.
     */
-  method {:main} Test()
+  method {:main} Runner()
   {
     var m := Memory.Create();
     assert Memory.Size(m) == 0;
