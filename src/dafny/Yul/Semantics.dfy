@@ -189,6 +189,27 @@ module Yul {
     if lhs > rhs then 1 else 0
   }
 
+  /**
+    *   Equality.
+    *   @param      x   
+    *   @param      y 
+    *   @returns    1 if x == y and 0 otherwise.
+    */
+  function Eq(x: u256, y: u256): (r: u256)
+  {
+    if x == y then 1 else 0
+  }
+
+  /**
+    *   Is zero.
+    *   @param      x   
+    *   @returns    1 if x == 0 and 0 otherwise.
+    */
+  function IsZero(x: u256): (r: u256)
+  {
+    if x == 0 then 1 else 0
+  }
+
   //    Bitwise operators
 
   /**
