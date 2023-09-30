@@ -36,7 +36,7 @@ module MaxBytecodeVerification {
     */
   const tag_1: u8 := 0x0f
   const tag_2: u8 := 0x0a
-  const tag_3: u8 := 0x1b
+  const tag_3: u8 := 0x1b 
   const tag_4: u8 := 0x18
 
   /**
@@ -61,7 +61,7 @@ module MaxBytecodeVerification {
   {
     m' := m;
     result := x;
-    if x < y {
+    if lt(x, y) {
       result := y;
     }
   }
@@ -100,7 +100,7 @@ module MaxBytecodeVerification {
     ghost var s1 := ExecuteFromTag1(st);
     m' := m;                                          //  bytecode move
     result := x;                                      //  matching Yul move
-    if x < y {
+    if lt(x, y) {
       s' := ExecuteFromTag4(ExecuteFromTag3(s1));     //  bytecode move
       result := y;                                    //  matching Yul move
     } else {

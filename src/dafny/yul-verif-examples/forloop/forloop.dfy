@@ -32,7 +32,7 @@ module forLoopYul {
   {
     var x: u256 := 0;
     m' := m;
-    while lt(x, 10) > 0 
+    while lt(x, 10)
         decreases 10 - x
         invariant x <= 10 
         invariant Memory.Size(m') % 32 == 0
@@ -42,29 +42,7 @@ module forLoopYul {
         x := Add(x, 1);
     }
   }
-
-  /**
-    *  Translation of Yul code of main in Dafny.
-    *  Use Dafny native arithmetic and comparisons. Because type is u256,
-    *  we gaurantee no overflow/underflow.
-    */ 
-  method Main2(m: Memory.T) returns (m': Memory.T)
-    requires Memory.Size(m) % 32 == 0
-    ensures Memory.Size(m') >= 10 * 32 
-  {
-    var x: u256 := 0;
-    m' := m;
-    while x < 10
-        decreases 10 - x
-        invariant x <= 10 
-        invariant Memory.Size(m') % 32 == 0
-        invariant x > 0 ==> Memory.Size(m') >= x as nat * 32    
-    {
-        m' := mstore(x * 32, x * 0x01, m'); 
-        x := x + 1;
-    }
-  }
-
+  
   /**
     *  Run the code.
     */

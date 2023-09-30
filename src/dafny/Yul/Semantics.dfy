@@ -141,73 +141,69 @@ module Yul {
     *   Unsigned lower than.
     *   @param      x   
     *   @param      y 
-    *   @returns    1 if x < y and 0 otherwise.
+    *   @returns    x < y
     */
-  function lt(x: u256, y: u256): (r: u256)
-    ensures r > 0 <==> x < y
-    ensures r == 0 <==> x >= y
+  function lt(x: u256, y: u256): bool
   {
-    if x < y then 1 else 0
+    x < y 
   }
 
   /**
     *   Unsigned greater than.
     *   @param      x   
     *   @param      y 
-    *   @returns    1 if x < y and 0 otherwise.
+    *   @returns    x > y
     */
-  function Gt(x: u256, y: u256): (r: u256)
-    ensures r > 0 <==> x > y
-    ensures r == 0 <==> x <= y
+  function Gt(x: u256, y: u256): bool
   {
-    if x > y then 1 else 0
+    x > y
   }
 
   /**
     *   Signed lower than.
     *   @param      x   
     *   @param      y 
-    *   @returns    1 if x as int < y as int and 0 otherwise.
+    *   @returns    x as int < y as int.
     */
-  function SLt(x: u256, y: u256): (r: u256)
+  function SLt(x: u256, y: u256): bool
   {
     var lhs := Word.asI256(x);
     var rhs := Word.asI256(y);
-    if lhs < rhs then 1 else 0
+    lhs < rhs 
   }
 
   /**
     *   Signed greater than.
     *   @param      x   
     *   @param      y 
-    *   @returns    1 if x <as int  y as int and 0 otherwise.
+    *   @returns    x as int >  y as int and 0 otherwise.
     */
-  function SGt(x: u256, y: u256): (r: u256)
+  function SGt(x: u256, y: u256): bool
   {
     var lhs := Word.asI256(x);
     var rhs := Word.asI256(y);
-    if lhs > rhs then 1 else 0
+    lhs > rhs
   }
 
   /**
     *   Equality.
     *   @param      x   
     *   @param      y 
-    *   @returns    1 if x == y and 0 otherwise.
+    *   @returns    x == y
     */
-  function Eq(x: u256, y: u256): (r: u256)
+  function Eq(x: u256, y: u256): bool
   {
-    if x == y then 1 else 0
+    x == y
   }
 
   /**
     *   Is zero.
     *   @param      x   
-    *   @returns    1 if x == 0 and 0 otherwise.
+    *   @returns    x == 0.
     */
-  function IsZero(x: u256): (r: u256)
+  function IsZero(x: u256): bool
   {
-    if x == 0 then 1 else 0
+    x == 0 
   }
 
   //    Bitwise operators

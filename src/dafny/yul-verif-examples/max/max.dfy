@@ -34,23 +34,7 @@ module maxYul {
   {
     m' := m;
     result := x;
-    if lt(x, y) > 0 {
-      result := y;
-    }
-  }
-
-  /**
-    *  Use Dafny native arithmetic and comparison operators.
-    */
-  method Max2(x: u256, y: u256, m: Memory.T) returns (result: u256, m': Memory.T)
-    ensures result == x || result == y
-    ensures result >= x && result >= y
-    ensures m' == m
-    ensures Memory.Size(m') == Memory.Size(m)
-  {
-    m' := m;
-    result := x;
-    if x < y {
+    if lt(x, y) {
       result := y;
     }
   }
