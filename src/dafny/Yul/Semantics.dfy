@@ -222,6 +222,17 @@ module Yul {
     (TWO_256 - 1 - x as nat) as u256
   }
 
+  /**
+    *   Bitwise And
+    *   @param      x    
+    *   @param      y    
+    *   @returns    x && y
+    */
+  function And(x: u256, y: u256) : u256
+  {
+    x 
+  }
+
   //  Memory operators.
 
   /**
