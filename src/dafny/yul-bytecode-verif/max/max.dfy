@@ -16,6 +16,7 @@ include "../../../../libs/evm-dafny/src/dafny/state.dfy"
 include "../../../../libs/evm-dafny/src/dafny/evm.dfy"
 
 include "../../Yul/Semantics.dfy"
+include "../../Yul/VerifSemantics.dfy"
 
 /**
   *  
@@ -23,7 +24,7 @@ include "../../Yul/Semantics.dfy"
 module MaxBytecodeVerification {
 
   import opened Int
-  import opened Yul
+  import opened YulStrict
   import opened Opcode
   import opened EvmState
   import Memory

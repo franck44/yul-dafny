@@ -13,6 +13,7 @@
  */
 
 include "../../Yul/Semantics.dfy"
+include "../../Yul/VerifSemantics.dfy"
 
 /**
   * A simple example with a sequence and an if statement.
@@ -20,7 +21,7 @@ include "../../Yul/Semantics.dfy"
 module forLoopYul {
 
   import opened Int
-  import opened Yul
+  import opened YulStrict
   import Memory
 
   /**
@@ -42,7 +43,7 @@ module forLoopYul {
         x := Add(x, 1);
     }
   }
-  
+
   /**
     *  Run the code.
     */

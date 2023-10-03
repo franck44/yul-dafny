@@ -13,6 +13,7 @@
  */
 
 include "../../Yul/Semantics.dfy"
+include "../../Yul/VerifSemantics.dfy"
 
 /**
   * A simple example with a sequence and an if statement.
@@ -20,17 +21,17 @@ include "../../Yul/Semantics.dfy"
 module maxYul {
 
   import opened Int
-  import opened Yul
+  import opened YulStrict
   import Memory
 
   /**
     *  Translation of the of the Yul code of max in Dafny.
     */
-  method Max(x: u256, y: u256, m: Memory.T) returns (result: u256, m': Memory.T)
+  method Max(x: u256, y: u256, m: Memory.T) returns (result: u256, m': Memory.T) 
     ensures result == x || result == y
     ensures result >= x && result >= y
-    ensures m' == m
-    ensures Memory.Size(m') == Memory.Size(m)
+    ensures m' == m         //  Memory is not modified
+    // ensures Memory.Size(m') == Memory.Siz(m)
   {
     m' := m;
     result := x;
@@ -42,7 +43,7 @@ module maxYul {
   /**
     *  Translation of Yul code of main in Dafny.
     */
-  method Main(m: Memory.T) returns (m': Memory.T)
+  method Main(m: Memory.T) returns (m': Memory.T)  
     requires Memory.Size(m) % 32 == 0
     ensures Memory.Size(m') > 0x40 + 31
     ensures Memory.ReadUint256(m', 0x40) == 8
@@ -56,7 +57,7 @@ module maxYul {
   /**
     *  Run the code.
     */
-  method {:main} {:verify false} Test()
+  method {:main} {:verify false} Test()  
   {
     var m := Main(Memory.Create());
     print Memory.ReadUint256(m, 0x40), "\n";
