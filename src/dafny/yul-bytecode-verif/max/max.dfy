@@ -122,8 +122,8 @@ module MaxBytecodeVerification {
   {
     var x := 8;                     //  let
     var y := 3;                     //  let
-    var z, m1 := Max(x, y, s);      //  funcall
-    s' := YulSem.MStore(0x40, z, m1);      //  memory store
+    var z, s1 := Max(x, y, s);      //  funcall
+    s' := YulSem.MStore(0x40, z, s1);      //  memory store
   }
 
   /**
@@ -143,17 +143,17 @@ module MaxBytecodeVerification {
     ensures st'.evm.memory == s'.yul.memory
   {
     ValidJumpDest(st);
-    ghost var s1 := ExecuteFromZero(st);        //  bytecode move
+    ghost var st1 := ExecuteFromZero(st);        //  bytecode move
     var x := 8;                                 //  Yul move
     var y := 3;                                 //  Yul move
 
-    var z, m1, s2 := MaxProof(x, y, s, s1);    //  Simulation of call to Max.
-    assert z == s2.Peek(0);
-    assert m1 == s;
+    var z, s1, st2 := MaxProof(x, y, s, st1);    //  Simulation of call to Max.
+    assert z == st2.Peek(0);
+    assert s1 == s;
 
-    st' := ExecuteFromTag2(s2);          //  Bytecode move
+    st' := ExecuteFromTag2(st2);          //  Bytecode move
     z':= z;                             //  Yul move
-    s' := YulSem.MStore(0x40, z, m1);          //  Yul move
+    s' := YulSem.MStore(0x40, z, s1);          //  Yul move
   }
 
   /**
