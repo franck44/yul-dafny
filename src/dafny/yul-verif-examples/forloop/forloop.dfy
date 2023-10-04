@@ -21,25 +21,28 @@ include "../../Yul/VerifSemantics.dfy"
 module forLoopYul {
 
   import opened Int
-  import opened YulStrict
+  import opened YulState
+  import opened YulSem = YulStrict
   import Memory
 
   /**
     *  Translation of Yul code of main in Dafny.
     */ 
-  method Main(m: Memory.T) returns (m': Memory.T)
-    requires Memory.Size(m) % 32 == 0
-    ensures Memory.Size(m') >= 10 * 32 
+  method Main(s: Executing) returns (s': State)
+    requires s.MemSize() % 32 == 0
+    ensures s'.EXECUTING?
+    ensures s'.MemSize() >= 10 * 32 
   {
     var x: u256 := 0;
-    m' := m;
+    s' := s;
     while lt(x, 10)
         decreases 10 - x
         invariant x <= 10 
-        invariant Memory.Size(m') % 32 == 0
-        invariant x > 0 ==> Memory.Size(m') >= x as nat * 32    
+        invariant s'.EXECUTING?
+        invariant s'.MemSize() % 32 == 0
+        invariant x > 0 ==> s'.MemSize() >= x as nat * 32    
     {
-        m' := mstore(Mul(x, 32), Mul(x, 0x01), m'); 
+        s' := YulSem.MStore(Mul(x, 32), Mul(x, 0x01), s'); 
         x := Add(x, 1);
     }
   }
@@ -49,16 +52,17 @@ module forLoopYul {
     */
   method {:main} Runner()
   {
-    var m := Memory.Create();
-    assert Memory.Size(m) == 0;
-    var m' := Main(m);
+    var s := YulState.Init();
+    assert s.MemSize() == 0;
+    var s' := Main(s);
 
-    assert Memory.Size(m') >= 32 * 10;
+    assert s'.MemSize() >= 32 * 10;
 
     for i := 0 to 10
-        invariant Memory.Size(m') >=  32 *10
+        invariant s'.EXECUTING?
+        invariant s'.MemSize() >=  32 *10
     {
-        print "Memory[", 32 * i, "..", 32 * i + 31 ,"] = ", Memory.ReadUint256(m', i * 32), " (u256)\n";
+        print "Memory[", 32 * i, "..", 32 * i + 31 ,"] = ", s'.Read(i * 32), " (u256)\n"; 
     }
     
   }

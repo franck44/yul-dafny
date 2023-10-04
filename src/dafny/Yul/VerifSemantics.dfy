@@ -51,7 +51,7 @@ module YulStrict {
     */
   function Add(x: u256, y: u256): u256
     requires x as nat + y as nat < TWO_256
-    ensures Add(x, y) == Yul.Add(x, y)
+    ensures Add(x, y) == Yul.Add(x, y) 
   {
     x + y
   }
@@ -254,9 +254,9 @@ module YulStrict {
     */ 
   function MStore(address: u256, value: u256, s: Executing): (s': State) 
     requires s.MemSize() % 32 == 0
+    ensures s'.EXECUTING?
     ensures s'.MemSize() % 32 == 0 
     ensures s'.MemSize() >= address as nat + 32
-    ensures s'.EXECUTING?
     ensures s'.yul.context == s.yul.context 
     ensures s'.yul.world == s.yul.world
   {

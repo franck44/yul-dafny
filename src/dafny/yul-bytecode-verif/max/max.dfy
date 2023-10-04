@@ -25,7 +25,7 @@ include "../../Yul/State.dfy"
 module MaxBytecodeVerification {
 
   import opened Int
-  import opened YulStrict
+  import opened YulSem = YulStrict
   import opened YulState
   import opened Opcode
   import EvmState
@@ -116,13 +116,14 @@ module MaxBytecodeVerification {
     */
   method Main(s: Executing) returns (s': State)
     requires s.MemSize() % 32 == 0
+    ensures s'.EXECUTING?
     ensures s'.MemSize() > 0x40 + 31
     ensures s'.Read(0x40) == 8
   {
     var x := 8;                     //  let
     var y := 3;                     //  let
     var z, m1 := Max(x, y, s);      //  funcall
-    s' := YulStrict.MStore(0x40, z, m1);      //  memory store
+    s' := YulSem.MStore(0x40, z, m1);      //  memory store
   }
 
   /**
@@ -135,6 +136,7 @@ module MaxBytecodeVerification {
     requires s.MemSize() % 32 == 0
     requires st.evm.memory == s.yul.memory
 
+    ensures s'.EXECUTING?
     ensures st'.EXECUTING?
     ensures s'.MemSize() > 0x40 + 31
     ensures s'.Read(0x40) == z'
@@ -151,7 +153,7 @@ module MaxBytecodeVerification {
 
     st' := ExecuteFromTag2(s2);          //  Bytecode move
     z':= z;                             //  Yul move
-    s' := YulStrict.MStore(0x40, z, m1);          //  Yul move
+    s' := YulSem.MStore(0x40, z, m1);          //  Yul move
   }
 
   /**

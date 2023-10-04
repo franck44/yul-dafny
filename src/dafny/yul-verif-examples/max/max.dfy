@@ -21,7 +21,7 @@ include "../../Yul/VerifSemantics.dfy"
 module maxYul {
 
   import opened Int
-  import opened YulStrict
+  import opened YulSem = YulStrict
   import opened YulState
 
   /**
@@ -45,17 +45,18 @@ module maxYul {
     */
   method Main(s: Executing) returns (s': State)  
     requires s.MemSize() % 32 == 0
+    ensures s'.EXECUTING?
     ensures s'.MemSize() > 0x40 + 31
     // ensures Memory.ReadUint256(m', 0x40) == 8
   {
     var x := 8;                     //  let
     var y := 3;                     //  let
-    // var z, m1 := Max(x, y, m);      //  funcall. Returns result ans new memory.
-    // m' := MStore(0x40, z, m1);      //  memory store
+    var z, s1 := Max(x, y, s);      //  funcall. Returns result ans new memory.
+    s' := MStore(0x40, z, s1);      //  memory store
   }
 
   /**
-    *  Run the code.
+    *  Run the code. 
     */
   method {:main} {:verify false} Test()  
   {
