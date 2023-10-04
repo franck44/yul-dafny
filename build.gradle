@@ -95,7 +95,7 @@ final DAFNY4_TEST_FLAGS = [
 // ======================================================================
 
 // Verify the DafnyEVM, whilst producing suitable logs
-task verifyDafny {
+task verify {
     // Specify inputs
     inputs.files(fileTree('src/dafny/').include('**/*.dfy'))
     // Specify outputs
