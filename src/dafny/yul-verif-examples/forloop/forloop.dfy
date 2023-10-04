@@ -13,7 +13,7 @@
  */
 
 include "../../Yul/Semantics.dfy"
-include "../../Yul/VerifSemantics.dfy"
+include "../../Yul/StrictSemantics.dfy"
 
 /**
   * A simple example with a sequence and an if statement.

@@ -16,7 +16,7 @@ include "../../../../libs/evm-dafny/src/dafny/state.dfy"
 include "../../../../libs/evm-dafny/src/dafny/evm.dfy"
 
 include "../../Yul/Semantics.dfy"
-include "../../Yul/VerifSemantics.dfy"
+include "../../Yul/StrictSemantics.dfy"
 include "../../Yul/State.dfy"
 
 /**
