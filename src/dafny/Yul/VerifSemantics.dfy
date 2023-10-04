@@ -51,7 +51,7 @@ module YulStrict {
     */
   function Add(x: u256, y: u256): u256
     requires x as nat + y as nat < TWO_256
-    ensures Add(x, y) == Yul.Add(x, y) 
+    ensures Add(x, y) == Yul.Add(x, y)
   {
     x + y
   }
@@ -251,13 +251,13 @@ module YulStrict {
     *   @note       Memory is a word-addressable array of bytes. A u256 value
     *               is stored into 32 bytes ranging from address to address + 31.
     *     
-    */ 
-  function MStore(address: u256, value: u256, s: Executing): (s': State) 
+    */
+  function MStore(address: u256, value: u256, s: Executing): (s': State)
     requires s.MemSize() % 32 == 0
     ensures s'.EXECUTING?
-    ensures s'.MemSize() % 32 == 0 
+    ensures s'.MemSize() % 32 == 0
     ensures s'.MemSize() >= address as nat + 32
-    ensures s'.yul.context == s.yul.context 
+    ensures s'.yul.context == s.yul.context
     ensures s'.yul.world == s.yul.world
   {
     //  Make sure memory is large enough.
@@ -265,7 +265,7 @@ module YulStrict {
     EXECUTING(s.yul.(memory := Memory.WriteUint256(m', address as nat, value)))
   }
 
-    // Environment (context) functions
-    // function CallValue(c: Context.T )
- 
+  // Environment (context) functions
+  // function CallValue(c: Context.T )
+
 }
