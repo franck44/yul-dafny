@@ -35,7 +35,7 @@ module maxYul {
   {
     s' := s;
     result := x;
-    if lt(x, y) {
+    if Lt(x, y) { 
       result := y;
     }
   }

@@ -64,7 +64,7 @@ module MaxBytecodeVerification {
   {
     s' := s;
     result := x;
-    if lt(x, y) {
+    if YulSem.Lt(x, y) {
       result := y;
     }
   }
@@ -103,7 +103,7 @@ module MaxBytecodeVerification {
     ghost var s1 := ExecuteFromTag1(st);
     s' := s;                                          //  bytecode move
     result := x;                                      //  matching Yul move
-    if lt(x, y) {
+    if YulSem.Lt(x, y) {
       st' := ExecuteFromTag4(ExecuteFromTag3(s1));     //  bytecode move
       result := y;                                    //  matching Yul move
     } else {
@@ -235,7 +235,7 @@ module MaxBytecodeVerification {
     var s4 := Dup(s3, 1);   //  x, r, y, y
     var s5 := Dup(s4, 4);   //  x, r, y, y, x
     assert s5.PC() == 0x14;
-    var s6 := Lt(s5);       //  x, r, y, x < y
+    var s6 := Bytecode.Lt(s5);       //  x, r, y, x < y
     var s7 := Push1(s6, tag_3); //  x, r, y, x < y, tag_ 3
     var s8 := JumpI(s7);        //  x, r, y
     s8

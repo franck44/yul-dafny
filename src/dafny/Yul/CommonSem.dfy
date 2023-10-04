@@ -53,7 +53,7 @@ abstract module CommonSem {
     *   @param      y 
     *   @returns    x < y
     */
-  function lt(x: u256, y: u256): bool
+  function Lt(x: u256, y: u256): bool
   {
     x < y 
   }

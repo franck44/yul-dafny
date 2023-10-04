@@ -35,7 +35,7 @@ module forLoopYul {
   {
     var x: u256 := 0;
     s' := s;
-    while lt(x, 10)
+    while YulSem.Lt(x, 10)
         decreases 10 - x
         invariant x <= 10 
         invariant s'.EXECUTING?
