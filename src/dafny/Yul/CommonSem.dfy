@@ -55,7 +55,7 @@ abstract module CommonSem {
     */
   function Lt(x: u256, y: u256): bool
   {
-    x < y 
+    x < y
   }
 
   /**
@@ -79,7 +79,7 @@ abstract module CommonSem {
   {
     var lhs := Word.asI256(x);
     var rhs := Word.asI256(y);
-    lhs < rhs 
+    lhs < rhs
   }
 
   /**
@@ -113,7 +113,7 @@ abstract module CommonSem {
     */
   function IsZero(x: u256): bool
   {
-    x == 0 
+    x == 0
   }
 
   //    Bitwise operators
@@ -136,17 +136,23 @@ abstract module CommonSem {
     */
   function And(x: u256, y: u256) : u256
   {
-    x 
+    x
   }
 
-    function Keccak256(loc: u256, len: u256, s: Executing): (u256, State)
-        requires len > 0 
-    {
-        var bytes := Memory.Slice(s.yul.memory, loc as nat, len as nat);
-        var hash := s.yul.precompiled.Sha3(bytes);
-        var m' := Memory.ExpandMem(s.yul.memory, loc as nat, len as nat);
-        (hash, EXECUTING(s.yul.(memory := m')))
-    }
+  /**
+    *  Sha3. 
+    *  @param  loc The start location in memory.
+    *  @param  len The number of bytes to hash.
+    */
+  function Keccak256(loc: u256, len: u256, s: Executing): (u256, State)
+    requires len > 0
+  {
+    //  get len bytes from loc and possibly extend memory
+    var bytes := Memory.Slice(s.yul.memory, loc as nat, len as nat);
+    var m' := Memory.ExpandMem(s.yul.memory, loc as nat, len as nat);
+    var hash := s.yul.precompiled.Sha3(bytes);
+    (hash, EXECUTING(s.yul.(memory := m')))
+  }
 
 
   //  Memory operators.
@@ -176,56 +182,56 @@ abstract module CommonSem {
     EXECUTING(s.yul.(memory := Memory.WriteUint256(m', address as nat, value)))
   }
 
-/**
-     * Get word from storage.
-     */
-    function SLoad(loc: u256, s: Executing): u256
-    {
-        s.Load(loc)
-    }
+  /**
+    * Get word from storage.
+    */
+  function SLoad(loc: u256, s: Executing): u256
+  {
+    s.Load(loc)
+  }
 
 
   // Environment (context) functions
 
   /**
-   *    Extract callvalue from context.
-   */
-  function CallValue(s: Executing): u256 
+    *    Extract callvalue from context.
+    */
+  function CallValue(s: Executing): u256
   {
     s.yul.context.callValue
   }
 
   /**
-     *  Get a word of the calldata.
-     *  @param  loc The starting location to read the word from.
-     *  
-     *  @returns    The section calldata[loc..loc + 31] if loc + 31 <= calldatsize
+    *  Get a word of the calldata.
+    *  @param  loc The starting location to read the word from.
+    *  
+    *  @returns    The section calldata[loc..loc + 31] if loc + 31 <= calldatsize
      8              and 0 otherwise. 
      */
-    function CallDataLoad(loc: u256, s: Executing): u256
-    {
-        if loc >= CallDataSize(s) then 0
-        else s.yul.context.CallDataRead(loc)
-    }
-
-    /**
-     * Get size of calldata in current environment.
-     */
-    function CallDataSize(s: Executing): u256
-    {
-        s.yul.context.CallDataSize()
-    }
+  function CallDataLoad(loc: u256, s: Executing): u256
+  {
+    if loc >= CallDataSize(s) then 0
+    else s.yul.context.CallDataRead(loc)
+  }
 
   /**
-   *    Revert.
-   *    @param  start   Offset of memory slice to be returned.
-   *    @param  len     Number of bytes from `start` to be returned.
-   */
-  function Revert(start: u256, len: u256, s: Executing): (s': State) 
+    * Get size of calldata in current environment.
+    */
+  function CallDataSize(s: Executing): u256
+  {
+    s.yul.context.CallDataSize()
+  }
+
+  /**
+    *    Revert.
+    *    @param  start   Offset of memory slice to be returned.
+    *    @param  len     Number of bytes from `start` to be returned.
+    */
+  function Revert(start: u256, len: u256, s: Executing): (s': State)
     ensures s'.ERROR?
   {
     var data := Memory.Slice(s.yul.memory, start as nat, len as nat);
     ERROR(REVERTS, data:=data)
-  } 
+  }
 
 }
