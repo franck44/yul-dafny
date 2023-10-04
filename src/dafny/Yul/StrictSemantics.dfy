@@ -14,64 +14,79 @@
 
 include "../../../libs/evm-dafny/src/dafny/util/int.dfy"
 include "../../../libs/evm-dafny/src/dafny/core/memory.dfy"
+include "../../../libs/evm-dafny/src/dafny/core/context.dfy"
 include "../../../libs/evm-dafny/src/dafny/bytecode.dfy"
-include "./CommonSem.dfy" 
-
+include "./Semantics.dfy"
+include "State.dfy"
+include "./CommonSem.dfy"
 /**
   * Provide Semantics of Yul builtin operators/functions.
+  * This semantics uses Dafny native arithmetic operators when possible
+  * enforcing types (u256).
+  *
+  * As we use Dafny native operators, it is easier for the solver
+  * to "reason" about them.
   *
   * EVM dialect.
   * @link{https://docs.soliditylang.org/en/latest/yul.html#evm-dialect}
   */
-module YulSem refines CommonSem {
+module YulStrict refines CommonSem {
+
+  import YulSem
+  import I256
 
   //  Arithmetic operators.
 
   /**
-    *   Addition modulo 2^256.
+    *   Addition.
     *   @param      x    
     *   @param      y
-    *   @returns    x + y mod 2^256.
+    *   @returns    x + y
     */
   function Add(x: u256, y: u256): u256
+    requires x as nat + y as nat < TWO_256
+    ensures Add(x, y) == YulSem.Add(x, y)
   {
-    ((x as nat + y as nat) % TWO_256) as u256
+    x + y
   }
 
   /**
-    *   Subtraction modulo 2^256.
+    *   Subtraction.
     *   @param      x    
     *   @param      y
-    *   @returns    x as int - y as int mod 2^256.
+    *   @returns    x as int - y as int as u256
     */
   function Sub(x: u256, y: u256): u256
+    requires -TWO_255 <= x as int - y as int < TWO_255
+    ensures Sub(x, y) == YulSem.Sub(x, y)
   {
     ((x as int - y as int) % TWO_256) as u256
   }
 
   /**
-    *   Multiplication modulo 2^256.
+    *   Multiplication.
     *   @param      x    
     *   @param      y
-    *   @returns    x * y mod 2^256.
+    *   @returns    x * y
     */
   function Mul(x: u256, y: u256): u256
-    ensures x as nat * y as nat < TWO_256 ==> Mul(x, y) == x * y
+    requires x as nat * y as nat < TWO_256
+    ensures Mul(x, y) == YulSem.Mul(x, y)
   {
-    ((x as nat * y as nat) % TWO_256) as u256
+    x * y
   }
 
   /**
-    *   Division modulo 2^256.
+    *   Division.
     *   @param      x    
     *   @param      y
-    *   @returns    if y !=0 then x / y mod 2^256 else 0.
-    *   @note       Re-use helpers in the bytecode semantics.
+    *   @returns    x / y
     */
   function Div(x: u256, y: u256): u256
-    ensures y != 0  ==> Div(x, y) == x / y
+    requires y != 0
+    ensures Div(x, y) == YulSem.Div(x, y)
   {
-    Bytecode.DivWithZero(x, y)
+    x / y
   }
 
   /**
@@ -83,26 +98,26 @@ module YulSem refines CommonSem {
     *               Use the EVM bytecode helpers.
     */
   function SDiv(x: u256, y: u256): u256
-    // ensures y > 0 && x > 0 ==> SDiv(x, y) == x / y
+    requires y != 0
+    requires (Word.asI256(y) != -1 || Word.asI256(x) != (-TWO_255 as i256))
+    ensures SDiv(x, y) == YulSem.SDiv(x, y)
   {
     var lhs := Word.asI256(x);
     var rhs := Word.asI256(y);
-    var res := Word.fromI256(Bytecode.SDivWithZero(lhs, rhs));
-    res
+    Word.fromI256(I256.Div(lhs,rhs))
   }
 
   /**
-    *   Modulo with zero handling.
+    *   Modulo.
     *   @param      x    
     *   @param      y
-    *   @returns    if y !=0 then x % y else 0.
+    *   @returns    x % y 
     */
   function Mod(x: u256, y: u256) : u256
-    ensures y != 0 ==> Mod(x, y) == x % y
+    requires y != 0
+    ensures Mod(x, y) == YulSem.Mod(x, y)
   {
-    if y == 0 then 0 as u256
-    else
-      (x % y) as u256
+    x % y
   }
 
   /**
@@ -113,10 +128,7 @@ module YulSem refines CommonSem {
     */
   function SModWithZero(x: u256, y: u256) : u256
   {
-    var lhs := Word.asI256(x);
-    var rhs := Word.asI256(y);
-    var res := Word.fromI256(Bytecode.SModWithZero(lhs, rhs));
-    res
+    YulSem.SModWithZero(x, y)
   }
 
 }
