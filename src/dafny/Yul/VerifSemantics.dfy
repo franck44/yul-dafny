@@ -14,8 +14,10 @@
 
 include "../../../libs/evm-dafny/src/dafny/util/int.dfy"
 include "../../../libs/evm-dafny/src/dafny/core/memory.dfy"
+include "../../../libs/evm-dafny/src/dafny/core/context.dfy"
 include "../../../libs/evm-dafny/src/dafny/bytecode.dfy"
 include "./Semantics.dfy"
+include "State.dfy"
 
 /**
   * Provide Semantics of Yul builtin operators/functions.
@@ -31,6 +33,7 @@ include "./Semantics.dfy"
 module YulStrict {
 
   import opened Int
+  import opened YulState
   import Yul
   import Memory
   import Bytecode
@@ -248,16 +251,21 @@ module YulStrict {
     *   @note       Memory is a word-addressable array of bytes. A u256 value
     *               is stored into 32 bytes ranging from address to address + 31.
     *     
-    */
-  function mstore(address: u256, value: u256, m: Memory.T): (m' :Memory.T)
-    requires Memory.Size(m) % 32 == 0
-    ensures Memory.Size(m') % 32 == 0
-    ensures Memory.Size(m') >= address as nat + 32
+    */ 
+  function MStore(address: u256, value: u256, s: Executing): (s': State) 
+    requires s.MemSize() % 32 == 0
+    ensures s'.MemSize() % 32 == 0 
+    ensures s'.MemSize() >= address as nat + 32
+    ensures s'.EXECUTING?
+    ensures s'.yul.context == s.yul.context 
+    ensures s'.yul.world == s.yul.world
   {
     //  Make sure memory is large enough.
-    var m' := Memory.ExpandMem(m, address as nat, 32);
-    Memory.WriteUint256(m', address as nat, value)
+    var m' := Memory.ExpandMem(s.yul.memory, address as nat, 32);
+    EXECUTING(s.yul.(memory := Memory.WriteUint256(m', address as nat, value)))
   }
 
-
+    // Environment (context) functions
+    // function CallValue(c: Context.T )
+ 
 }
