@@ -13,8 +13,10 @@
  */
 
 include "../../../libs/evm-dafny/src/dafny/util/int.dfy"
+include "../../../libs/evm-dafny/src/dafny/util/arrays.dfy"
 include "../../../libs/evm-dafny/src/dafny/core/memory.dfy"
 include "../../../libs/evm-dafny/src/dafny/core/context.dfy"
+include "../../../libs/evm-dafny/src/dafny/core/precompiled.dfy"
 include "../../../libs/evm-dafny/src/dafny/core/worldstate.dfy"
 
 /**
@@ -23,9 +25,12 @@ include "../../../libs/evm-dafny/src/dafny/core/worldstate.dfy"
 module YulState {
 
   import opened Int
+  import opened Arrays
   import Memory
   import Context
   import WorldState
+  import Precompiled
+
 
   /** 
     *  An executing state of ther Yul machine. 
@@ -37,15 +42,31 @@ module YulState {
   datatype Raw = EState(
     context: Context.T,
     memory: Memory.T,
-    world : WorldState.T
+    world : WorldState.T,
+    precompiled: Precompiled.T
   )
+
+  type T = s: Raw | s.context.address in s.world.accounts
+  witness YUL_WITNESS
+
+  datatype Error =
+      REVERTS
+    | INSUFFICIENT_FUNDS
+    | MEMORY_OVERFLOW
+    | BALANCE_OVERFLOW
+    | RETURNDATA_OVERFLOW
+    | INVALID_PRECONDITION
+    | CODESIZE_EXCEEDED
+    | CALLDEPTH_EXCEEDED
+    | ACCOUNT_COLLISION
+    | WRITE_PROTECTION_VIOLATED
 
   /**
     *    A state of the Yul machine.
     */
   datatype State =
-      EXECUTING(yul: Raw)
-    | REVERT()
+      EXECUTING(yul: T) 
+    | ERROR(error: Error, data: Array<u8> := [])
 
   {
     //  Some useful functions
@@ -62,10 +83,10 @@ module YulState {
     }
 
     /**
-     *  Read a word in memory.
-     *
-     *  @param  address The first byte to read from.
-     */
+      *  Read a word in memory.
+      *
+      *  @param  address The first byte to read from.
+      */
     function Read(address:nat) : u256
       requires this.EXECUTING?
       requires address + 31 < this.MemSize() {
@@ -73,23 +94,34 @@ module YulState {
     }
 
 
+    /**
+      * Read word from storage
+      */
+    function Load(address:u256) : u256
+      requires this.EXECUTING?
+    {
+      var account := yul.context.address;
+      yul.world.Read(account,address)
+    }
+
   }
 
-  const STATE_WITNESS: Raw :=
+  const YUL_WITNESS: Raw :=
     EState(
       Context.DEFAULT,
       Memory.Create(),
-      WorldState.Create(map[0:=WorldState.DefaultAccount()])
+      WorldState.Create(map[0:=WorldState.DefaultAccount()]),
+      Precompiled.DEFAULT
     )
 
   /**
     * The type for executing states.
     */
   type Executing = s:State | s.EXECUTING?
-    witness EXECUTING(STATE_WITNESS)
+    witness EXECUTING(YUL_WITNESS)
 
   function Init(): Executing {
-    EXECUTING(STATE_WITNESS)
+    EXECUTING(YUL_WITNESS)
   }
 
   /**

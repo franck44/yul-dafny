@@ -139,6 +139,16 @@ abstract module CommonSem {
     x 
   }
 
+    function Keccak256(loc: u256, len: u256, s: Executing): (u256, State)
+        requires len > 0 
+    {
+        var bytes := Memory.Slice(s.yul.memory, loc as nat, len as nat);
+        var hash := s.yul.precompiled.Sha3(bytes);
+        var m' := Memory.ExpandMem(s.yul.memory, loc as nat, len as nat);
+        (hash, EXECUTING(s.yul.(memory := m')))
+    }
+
+
   //  Memory operators.
 
   /**
@@ -166,7 +176,56 @@ abstract module CommonSem {
     EXECUTING(s.yul.(memory := Memory.WriteUint256(m', address as nat, value)))
   }
 
+/**
+     * Get word from storage.
+     */
+    function SLoad(loc: u256, s: Executing): u256
+    {
+        s.Load(loc)
+    }
+
+
   // Environment (context) functions
-  // function CallValue(c: Context.T )
+
+  /**
+   *    Extract callvalue from context.
+   */
+  function CallValue(s: Executing): u256 
+  {
+    s.yul.context.callValue
+  }
+
+  /**
+     *  Get a word of the calldata.
+     *  @param  loc The starting location to read the word from.
+     *  
+     *  @returns    The section calldata[loc..loc + 31] if loc + 31 <= calldatsize
+     8              and 0 otherwise. 
+     */
+    function CallDataLoad(loc: u256, s: Executing): u256
+    {
+        if loc >= CallDataSize(s) then 0
+        else s.yul.context.CallDataRead(loc)
+    }
+
+    /**
+     * Get size of calldata in current environment.
+     */
+    function CallDataSize(s: Executing): u256
+    {
+        s.yul.context.CallDataSize()
+    }
+
+  /**
+   *    Revert.
+   *    @param  start   Offset of memory slice to be returned.
+   *    @param  len     Number of bytes from `start` to be returned.
+   */
+  function Revert(start: u256, len: u256, s: Executing): (s': State) 
+    ensures s'.ERROR?
+  {
+    var data := Memory.Slice(s.yul.memory, start as nat, len as nat);
+    ERROR(REVERTS, data:=data)
+  } 
 
 }
