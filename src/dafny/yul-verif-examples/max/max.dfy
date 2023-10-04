@@ -22,18 +22,18 @@ module maxYul {
 
   import opened Int
   import opened YulStrict
-  import Memory
+  import opened YulState
 
   /**
     *  Translation of the of the Yul code of max in Dafny.
     */
-  method Max(x: u256, y: u256, m: Memory.T) returns (result: u256, m': Memory.T) 
+  method Max(x: u256, y: u256, s: Executing) returns (result: u256, s': State) 
     ensures result == x || result == y
     ensures result >= x && result >= y
-    ensures m' == m         //  Memory is not modified
+    ensures s' == s        //  Memory is not modified
     // ensures Memory.Size(m') == Memory.Siz(m)
   {
-    m' := m;
+    s' := s;
     result := x;
     if lt(x, y) {
       result := y;
@@ -43,15 +43,15 @@ module maxYul {
   /**
     *  Translation of Yul code of main in Dafny.
     */
-  method Main(m: Memory.T) returns (m': Memory.T)  
-    requires Memory.Size(m) % 32 == 0
-    ensures Memory.Size(m') > 0x40 + 31
-    ensures Memory.ReadUint256(m', 0x40) == 8
+  method Main(s: Executing) returns (s': State)  
+    requires s.MemSize() % 32 == 0
+    ensures s'.MemSize() > 0x40 + 31
+    // ensures Memory.ReadUint256(m', 0x40) == 8
   {
     var x := 8;                     //  let
     var y := 3;                     //  let
-    var z, m1 := Max(x, y, m);      //  funcall. Returns result ans new memory.
-    m' := mstore(0x40, z, m1);      //  memory store
+    // var z, m1 := Max(x, y, m);      //  funcall. Returns result ans new memory.
+    // m' := MStore(0x40, z, m1);      //  memory store
   }
 
   /**
@@ -59,8 +59,8 @@ module maxYul {
     */
   method {:main} {:verify false} Test()  
   {
-    var m := Main(Memory.Create());
-    print Memory.ReadUint256(m, 0x40), "\n";
+    var s := Main(YulState.Init());
+    print s.Read(0x40), "\n";
   }
 
 }

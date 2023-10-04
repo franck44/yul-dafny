@@ -11,12 +11,13 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
- 
+
 include "../../../../libs/evm-dafny/src/dafny/state.dfy"
 include "../../../../libs/evm-dafny/src/dafny/evm.dfy"
 
 include "../../Yul/Semantics.dfy"
 include "../../Yul/VerifSemantics.dfy"
+include "../../Yul/State.dfy"
 
 /**
   *  
@@ -25,8 +26,9 @@ module MaxBytecodeVerification {
 
   import opened Int
   import opened YulStrict
+  import opened YulState
   import opened Opcode
-  import opened EvmState
+  import EvmState
   import Memory
   import EVM
   import opened Bytecode
@@ -37,7 +39,7 @@ module MaxBytecodeVerification {
     */
   const tag_1: u8 := 0x0f
   const tag_2: u8 := 0x0a
-  const tag_3: u8 := 0x1b 
+  const tag_3: u8 := 0x1b
   const tag_4: u8 := 0x18
 
   /**
@@ -45,7 +47,7 @@ module MaxBytecodeVerification {
     *  is a JUMPDEST.
     *  This axiom enforces it.
     */
-  lemma {:axiom} ValidJumpDest(s: ExecutingState)
+  lemma {:axiom} ValidJumpDest(s: EvmState.ExecutingState)
     ensures s.IsJumpDest(tag_1 as u256)
     ensures s.IsJumpDest(tag_2 as u256)
     ensures s.IsJumpDest(tag_3 as u256)
@@ -55,12 +57,12 @@ module MaxBytecodeVerification {
     *  Translation of the of the Yul code in Dafny.
     *   Use Dafny native operators.
     */
-  method Max(x: u256, y: u256, m: Memory.T) returns (result: u256, m': Memory.T)
+  method Max(x: u256, y: u256, s: Executing) returns (result: u256, s': State)
     ensures result == x || result == y
     ensures result >= x && result >= y
-    ensures m' == m
+    ensures s' == s
   {
-    m' := m;
+    s' := s;
     result := x;
     if lt(x, y) {
       result := y;
@@ -81,7 +83,7 @@ module MaxBytecodeVerification {
     *              two different branches. Both can be matched respectively by `result := y` and 
     *              `skip` (no instruction). 
     */
-  method MaxProof(x: u256, y: u256, m: Memory.T, ghost st:ExecutingState) returns (result: u256, m': Memory.T, ghost s': State)
+  method MaxProof(x: u256, y: u256, s: Executing, ghost st:EvmState.ExecutingState) returns (result: u256, s': State, ghost st': EvmState.State)
     requires st.Operands() >= 3
     requires st.Peek(0) == x
     requires st.Peek(1) == y
@@ -89,73 +91,73 @@ module MaxBytecodeVerification {
     requires st.IsJumpDest(st.Peek(2))
     requires st.PC() == tag_1 as nat
     requires st.Capacity() >= 2
-    requires st.evm.memory == m
+    requires st.evm.memory == s.yul.memory
 
-    ensures s'.EXECUTING?
-    ensures s'.PC() == tag_2 as nat
-    ensures s'.Operands() == st.Operands() - 2
-    ensures s'.Peek(0) == result
-    ensures s'.evm.memory == st.evm.memory
-    ensures m' == m
+    ensures st'.EXECUTING?
+    ensures st'.PC() == tag_2 as nat
+    ensures st'.Operands() == st.Operands() - 2
+    ensures st'.Peek(0) == result
+    ensures st'.evm.memory == st.evm.memory
+    ensures s' == s
   {
     ghost var s1 := ExecuteFromTag1(st);
-    m' := m;                                          //  bytecode move
+    s' := s;                                          //  bytecode move
     result := x;                                      //  matching Yul move
     if lt(x, y) {
-      s' := ExecuteFromTag4(ExecuteFromTag3(s1));     //  bytecode move
+      st' := ExecuteFromTag4(ExecuteFromTag3(s1));     //  bytecode move
       result := y;                                    //  matching Yul move
     } else {
-      s' := ExecuteFromTag4(s1);                      //  bytecode move
+      st' := ExecuteFromTag4(s1);                      //  bytecode move
     }                                                 //  matching Yul move: Skip
   }
 
   /**
     *  Translation of Yul code in Dafny.
     */
-  method Main(m: Memory.T) returns (m': Memory.T)
-    requires Memory.Size(m) % 32 == 0
-    ensures Memory.Size(m') > 0x40 + 31
-    ensures Memory.ReadUint256(m', 0x40) == 8
+  method Main(s: Executing) returns (s': State)
+    requires s.MemSize() % 32 == 0
+    ensures s'.MemSize() > 0x40 + 31
+    ensures s'.Read(0x40) == 8
   {
     var x := 8;                     //  let
     var y := 3;                     //  let
-    var z, m1 := Max(x, y, m);      //  funcall
-    m' := mstore(0x40, z, m1);      //  memory store
+    var z, m1 := Max(x, y, s);      //  funcall
+    s' := YulStrict.MStore(0x40, z, m1);      //  memory store
   }
 
   /**
     *  Proof of simulation for Main.
     */
-  method MainProof(m: Memory.T, ghost st:ExecutingState) returns (z': u256, m': Memory.T, ghost s': State)
+  method MainProof(s:  Executing, ghost st: EvmState.ExecutingState) returns (z': u256, s': State, ghost st': EvmState.State)
     requires st.Capacity() >= 5
     requires st.Operands() >= 0
     requires st.PC() == 0 as nat
-    requires Memory.Size(m) % 32 == 0
-    requires st.evm.memory == m
+    requires s.MemSize() % 32 == 0
+    requires st.evm.memory == s.yul.memory
 
-    ensures s'.EXECUTING?
-    ensures Memory.Size(m') > 0x40 + 31
-    ensures Memory.ReadUint256(m', 0x40) == z'
-    ensures s'.evm.memory == m'
+    ensures st'.EXECUTING?
+    ensures s'.MemSize() > 0x40 + 31
+    ensures s'.Read(0x40) == z'
+    ensures st'.evm.memory == s'.yul.memory
   {
     ValidJumpDest(st);
     ghost var s1 := ExecuteFromZero(st);        //  bytecode move
     var x := 8;                                 //  Yul move
     var y := 3;                                 //  Yul move
 
-    var z, m1, s2 := MaxProof(x, y, m, s1);    //  Simulation of call to Max.
+    var z, m1, s2 := MaxProof(x, y, s, s1);    //  Simulation of call to Max.
     assert z == s2.Peek(0);
-    assert m1 == m;
+    assert m1 == s;
 
-    s' := ExecuteFromTag2(s2);          //  Bytecode move
+    st' := ExecuteFromTag2(s2);          //  Bytecode move
     z':= z;                             //  Yul move
-    m' := mstore(0x40, z, m1);          //  Yul move
+    s' := YulStrict.MStore(0x40, z, m1);          //  Yul move
   }
 
   /**
     *  Code starting at PC == 0.
     */
-  function ExecuteFromZero(st:ExecutingState): (s': State)
+  function ExecuteFromZero(st: EvmState.ExecutingState): (s': EvmState.State)
     requires st.Capacity() >= 5
     requires st.Operands() >= 0
     requires st.PC() == 0 as nat
@@ -183,7 +185,7 @@ module MaxBytecodeVerification {
     s6
   }
 
-  function ExecuteFromTag2(st:ExecutingState): (s': State)
+  function ExecuteFromTag2(st: EvmState.ExecutingState): (s': EvmState.State)
     requires st.Capacity() >= 1
     requires st.Operands() >= 0
     requires st.PC() == tag_2 as nat
@@ -196,11 +198,11 @@ module MaxBytecodeVerification {
     */
     var s1 := JumpDest(st);
     var s2 := Push1(s1, 0x40);
-    var s3 := MStore(s2);
+    var s3 := Bytecode.MStore(s2);
     s3
   }
 
-  function ExecuteFromTag1(st:ExecutingState): (s': State)
+  function ExecuteFromTag1(st: EvmState.ExecutingState): (s': EvmState.State)
     requires st.Capacity() >= 2
     requires st.Operands() >= 3
     requires st.PC() == tag_1 as nat
@@ -237,7 +239,7 @@ module MaxBytecodeVerification {
     s8
   }
 
-  function ExecuteFromTag4(st:ExecutingState): (s': State)
+  function ExecuteFromTag4(st: EvmState.ExecutingState): (s': EvmState.State)
     requires st.Operands() >= 3
     requires st.PC() == tag_4 as nat
     requires st.IsJumpDest(st.Peek(1))
@@ -261,7 +263,7 @@ module MaxBytecodeVerification {
     s11
   }
 
-  function ExecuteFromTag3(st:ExecutingState): (s': State)
+  function ExecuteFromTag3(st: EvmState.ExecutingState): (s': EvmState.State)
     requires st.Operands() >= 3
     requires st.Capacity() >= 1
     requires st.PC() == tag_3 as nat
