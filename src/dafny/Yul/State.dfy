@@ -12,6 +12,7 @@
  * under the License.
  */
 
+include "../../../libs/evm-dafny/src/dafny/util/int.dfy"
 include "../../../libs/evm-dafny/src/dafny/core/memory.dfy"
 include "../../../libs/evm-dafny/src/dafny/core/context.dfy"
 include "../../../libs/evm-dafny/src/dafny/core/worldstate.dfy"
@@ -21,6 +22,7 @@ include "../../../libs/evm-dafny/src/dafny/core/worldstate.dfy"
   */
 module YulState {
 
+  import opened Int
   import Memory
   import Context
   import WorldState
@@ -46,10 +48,10 @@ module YulState {
     | REVERT()
 
   {
-    //  Some useful functions 
+    //  Some useful functions
 
-    //  Memory 
-    
+    //  Memory
+
     /**
       *  Get Memory size.
       */
@@ -57,6 +59,17 @@ module YulState {
       requires this.EXECUTING?
     {
       Memory.Size(this.yul.memory)
+    }
+
+    /**
+     *  Read a word in memory.
+     *
+     *  @param  address The first byte to read from.
+     */
+    function Read(address:nat) : u256
+      requires this.EXECUTING?
+      requires address + 31 < this.MemSize() {
+      Memory.ReadUint256(yul.memory, address)
     }
 
 
@@ -74,6 +87,10 @@ module YulState {
     */
   type Executing = s:State | s.EXECUTING?
     witness EXECUTING(STATE_WITNESS)
+
+  function Init(): Executing {
+    EXECUTING(STATE_WITNESS)
+  }
 
   /**
     * The type for terminated states.
