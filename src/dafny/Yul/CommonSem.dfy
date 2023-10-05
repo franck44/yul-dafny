@@ -30,10 +30,20 @@ include "./State.dfy"
 abstract module CommonSem {
 
   import opened Int
+  import U256
   import opened YulState
   import Memory
   import Bytecode
   import Word
+
+  /**
+    *    @link{https://osec.io/blog/2023-07-28-solidity-compilers-memory-safety}
+    *    Semantics seems to be important only for optimisation.
+   8    For now we use Identyt for memoryguard.
+   */
+  function MemoryGuard(x: u256): u256 {
+    x
+  }
 
   /**
     *   Signed Modulo with zero handling.
@@ -140,22 +150,57 @@ abstract module CommonSem {
   }
 
   /**
+    * Right shift operation.
+    */
+  function Shr(shift: u256, value: u256): u256
+  {
+    U256.Shr(shift, value)
+  }
+
+  /**
     *  Sha3. 
     *  @param  loc The start location in memory.
     *  @param  len The number of bytes to hash.
+    *
+    *   @note       We require that memory size is ;arger than the requested
+    *               last memory location. This implies that the state 
+    *               is not modified and no memory expansion is needed. 
     */
-  function Keccak256(loc: u256, len: u256, s: Executing): (u256, State)
+  function Keccak256(loc: u256, len: u256, s: Executing): u256
     requires len > 0
+    /** Enforce constraint on memory size and slice to read. */
+    requires loc as nat + len as nat < s.MemSize()
   {
     //  get len bytes from loc and possibly extend memory
     var bytes := Memory.Slice(s.yul.memory, loc as nat, len as nat);
-    var m' := Memory.ExpandMem(s.yul.memory, loc as nat, len as nat);
+    // var m' := Memory.ExpandMem(s.yul.memory, loc as nat, len as nat);
     var hash := s.yul.precompiled.Sha3(bytes);
-    (hash, EXECUTING(s.yul.(memory := m')))
+    hash
   }
 
-
   //  Memory operators.
+
+  /**
+    *   Memory load. load a u256 into memory.
+    *
+    *   @param      address The address to read a word from.
+    *
+    *   @note       Memory is a word-addressable array of bytes. A u256 value
+    *               is stored into 32 bytes ranging from address to address + 31.
+    *     
+    */
+  function MLoad(address: u256, s: Executing): (s': (u256, State))
+    requires s.MemSize() % 32 == 0
+    ensures s'.1.EXECUTING?
+    ensures s'.1.MemSize() % 32 == 0
+    ensures s'.1.MemSize() > address as nat + 31
+    ensures s'.1.yul.context == s.yul.context
+    ensures s'.1.yul.world == s.yul.world
+  {
+    //  Make sure memory is large enough.
+    var m' := Memory.ExpandMem(s.yul.memory, address as nat, 32);
+    (Memory.ReadUint256(m', address as nat) ,EXECUTING(s.yul.(memory := m')))
+  }
 
   /**
     *   Memory store. Store a u256 into memory.
@@ -173,7 +218,7 @@ abstract module CommonSem {
     requires s.MemSize() % 32 == 0
     ensures s'.EXECUTING?
     ensures s'.MemSize() % 32 == 0
-    ensures s'.MemSize() >= address as nat + 32
+    ensures s'.MemSize() > address as nat + 31
     ensures s'.yul.context == s.yul.context
     ensures s'.yul.world == s.yul.world
   {
@@ -190,6 +235,13 @@ abstract module CommonSem {
     s.Load(loc)
   }
 
+  /**
+    * Save word to storage.
+    */
+  function SStore(loc: u256, val: u256, s: Executing): (s': State)
+  {
+    s.Store(loc, val)
+  }
 
   // Environment (context) functions
 
