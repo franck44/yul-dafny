@@ -47,7 +47,7 @@ module YulState {
   )
 
   type T = s: Raw | s.context.address in s.world.accounts
-  witness YUL_WITNESS
+    witness YUL_WITNESS
 
   datatype Error =
       REVERTS
@@ -65,13 +65,12 @@ module YulState {
     *    A state of the Yul machine.
     */
   datatype State =
-      EXECUTING(yul: T) 
+      EXECUTING(yul: T)
     | ERROR(error: Error, data: Array<u8> := [])
+    | RETURNS(data: Array<u8> := [] )
 
   {
-    //  Some useful functions
-
-    //  Memory
+    //  Memory helpers.
 
     /**
       *  Get Memory size.
@@ -94,6 +93,8 @@ module YulState {
     }
 
 
+    //  Storage helpers.
+
     /**
       * Read word from storage
       */
@@ -102,6 +103,16 @@ module YulState {
     {
       var account := yul.context.address;
       yul.world.Read(account,address)
+    }
+
+    /**
+      * Store word in storage
+      */
+    function Store(address:u256, val: u256): State
+      requires this.EXECUTING?
+    {
+      var account := yul.context.address;
+      EXECUTING(yul.(world:=yul.world.Write(account,address,val)))
     }
 
   }
