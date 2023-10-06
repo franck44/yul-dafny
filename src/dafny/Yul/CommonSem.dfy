@@ -153,8 +153,20 @@ abstract module CommonSem {
     * Right shift operation.
     */
   function Shr(shift: u256, value: u256): u256
+    ensures shift == 0 ==> Shr(shift, value) == value
   {
+    assume U256.Shr(0, value) == value;
     U256.Shr(shift, value)
+  }
+
+  /**
+    * Left shift operation.
+    */
+  function Shl(shift: u256, value: u256): u256
+    ensures shift == 0 ==> Shl(shift, value) == value
+  {
+    assume U256.Shl(0, value) == value;
+    U256.Shl(shift, value)
   }
 
   /**
