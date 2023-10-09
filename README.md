@@ -62,7 +62,7 @@ method Max(x: u256, y: u256) returns (result: u256)
   ensures result >= x && result >= y
 {
   result := x;        
-  if lt(x, y) {   //  The Dafny lt instruction returns a Boolean
+  if Lt(x, y) {   //  The Dafny lt instruction returns a Boolean
       result := y;
   }
 }
