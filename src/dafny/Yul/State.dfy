@@ -31,7 +31,6 @@ module YulState {
   import WorldState
   import Precompiled
 
-
   /** 
     *  An executing state of ther Yul machine. 
     *   
@@ -55,6 +54,7 @@ module YulState {
     | MEMORY_OVERFLOW
     | BALANCE_OVERFLOW
     | RETURNDATA_OVERFLOW
+    | ARITHMETIC_OVER_UNDER_FLOW
     | INVALID_PRECONDITION
     | CODESIZE_EXCEEDED
     | CALLDEPTH_EXCEEDED
@@ -117,6 +117,9 @@ module YulState {
 
   }
 
+  //  Types and constanst
+
+  //  A state witness to ensure that some types are inhabited.
   const YUL_WITNESS: Raw :=
     EState(
       Context.DEFAULT,
@@ -126,7 +129,7 @@ module YulState {
     )
 
   /**
-    * The type for executing states.
+    * The type for executing (normal, or non-error) states.
     */
   type Executing = s:State | s.EXECUTING?
     witness EXECUTING(YUL_WITNESS)
@@ -138,8 +141,8 @@ module YulState {
   /**
     * The type for terminated states.
     */
-  // type TerminatedState = s:State | s.REVERT?
-  // witness ERROR(INSUFFICIENT_GAS)
+  type TerminatedState = s:State | (s.RETURNS? || s.ERROR?)
+    witness ERROR(INSUFFICIENT_FUNDS)
 
 
 
