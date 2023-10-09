@@ -1,22 +1,22 @@
 
 object "Runtime" {
-        code {
-			
-            function max(x, y) -> result 
-            {
-                result := x
-                if lt(x, y) {
-                    result := y 
-                } 
-            }
-            
-            let x := 8
+  code {
 
-            let y := 3
+  function max(x, y) -> result 
+  {
+      result := x
+      if lt(x, y) {
+          result := y 
+      } 
+  }
+      
+  let x := 8
 
-            let z := max(x, y)
+  let y := 3
 
-            mstore(0x40, z)
-            
-        }
-    }
+  let z := max(x, y)
+
+  mstore(0x40, z)
+      
+  }
+}
