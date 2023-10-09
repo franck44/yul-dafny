@@ -27,7 +27,7 @@ include "./State.dfy"
   * EVM dialect.
   * @link{https://docs.soliditylang.org/en/latest/yul.html#evm-dialect}
   */
-abstract module CommonSem {
+module CommonSem {
 
   import opened Int
   import U256
@@ -135,7 +135,8 @@ abstract module CommonSem {
     */
   function Not(x: u256) : u256
   {
-    (TWO_256 - 1 - x as nat) as u256
+    var z := (!(x as bv256) as nat) as u256;
+    z
   }
 
   /**
@@ -146,7 +147,25 @@ abstract module CommonSem {
     */
   function And(x: u256, y: u256) : u256
   {
-    x
+    ((x as bv256) & (y as bv256)) as u256
+  }
+
+  lemma foo211(x: u256, y: u256)
+    requires y == 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+    ensures And(x, y) == x
+  {    
+  }
+
+
+  /**
+    *   Bitwise Or
+    *   @param      x    
+    *   @param      y    
+    *   @returns    x || y
+    */
+  function Or(x: u256, y: u256) : u256
+  {
+    ((x as bv256) | (y as bv256)) as u256
   }
 
   /**
