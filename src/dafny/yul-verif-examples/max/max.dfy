@@ -21,7 +21,7 @@ include "../../Yul/StrictSemantics.dfy"
 module maxYul {
 
   import opened Int
-  import opened YulSem = YulStrict
+  import opened YulStrict
   import opened YulState
 
   /**
@@ -30,8 +30,7 @@ module maxYul {
   method Max(x: u256, y: u256, s: Executing) returns (result: u256, s': State) 
     ensures result == x || result == y
     ensures result >= x && result >= y
-    ensures s' == s        //  Memory is not modified
-    // ensures Memory.Size(m') == Memory.Siz(m)
+    ensures s' == s     
   {
     s' := s;
     result := x;
