@@ -120,6 +120,8 @@ task verify {
                 def name = file.name.take(file.name.lastIndexOf('.'))
                 def logging = '--log-format:csv;LogFileName=build/logs/' + name + '.csv'
                 // Run test
+                // project.logger.info('my info message')
+                project.logger.lifecycle('Verifying ' + [file])
                 exec {
                     executable DAFNY_HOME + '/dafny'
                     args DAFNY4_VERIFY_FLAGS + logging + [file]
