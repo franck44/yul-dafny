@@ -24,7 +24,8 @@ include "../../Yul/State.dfy"
 module ERC20 {
 
   import opened Int
-  import opened YulSem = YulStrict
+  import opened YulStrict
+  import YulSem
   import opened YulState
   import ByteUtils
 
