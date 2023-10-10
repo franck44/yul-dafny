@@ -198,7 +198,7 @@ module ERC20 {
 
 
   method external_fun_totalSupply_3(s: Executing) returns (s': State)
-    requires 4 <= CallDataSize(s) as nat < TWO_255 - 4
+    requires 4 <= CallDataSize(s) as nat < TWO_255 - 1
     requires s.MemSize() % 32 == 0
     ensures s'.ERROR? || s'.RETURNS?
     ensures s'.RETURNS? ==> |s'.data| == 32
@@ -283,7 +283,7 @@ module ERC20 {
   }
 
   method external_fun_mint_13(s: Executing) returns (s': State)
-    requires 4 <= CallDataSize(s) as nat < TWO_255 - 4
+    requires 4 <= CallDataSize(s) as nat < TWO_255 - 1
     requires s.MemSize() % 32 == 0
     ensures CallDataSize(s) < 36 ==> s'.ERROR?
     ensures CallDataSize(s) >= 36 && (s.Load(0) as nat + ByteUtils.ReadUint256(s.yul.context.callData, 4) as nat) >= TWO_256 ==> s'.ERROR?
