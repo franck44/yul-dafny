@@ -15,8 +15,6 @@
 include "../../Yul/Semantics.dfy"
 include "../../Yul/StrictSemantics.dfy"
 include "../../Yul/State.dfy"
-// include "../../../../libs/evm-dafny/src/dafny/util/bytes.dfy"
-
 
 /**
   * A simple example with a sequence and an if statement.
@@ -38,14 +36,13 @@ module ERC20 {
     //  some of balances should be total supply
   }
 
-
   method Main(s: Executing, ghost totalSupply: u256) returns (s': State)
     requires totalSupply == s.Load(0)
     requires s.MemSize() % 32 == 0
     requires 4 <= CallDataSize(s) as nat < TWO_255 - 4
     ensures CallDataSize(s) < 4 ==> s'.ERROR?
     ensures CallDataSize(s) >= 4 && shift_right_224_unsigned(CallDataLoad(0, s)) == 0x18160ddd ==> ByteUtils.ReadUint256(s'.data, 0) == s.Load(0)
-    ensures s'.RETURNS? ==> ByteUtils.ReadUint256(s'.data, 0) == totalSupply
+    ensures CallDataSize(s) >= 36 && shift_right_224_unsigned(CallDataLoad(0, s)) == 0xa0712d68 && (s.Load(0) as nat + ByteUtils.ReadUint256(s.yul.context.callData, 4) as nat) < TWO_256 ==> s'.RETURNS?
   {
 
     // var s1 := MStore(64, MemoryGuard(128), s);
@@ -65,7 +62,7 @@ module ERC20 {
           // totalSupply()
 
           var s2 := external_fun_totalSupply_3(s1);
-          assert s2.RETURNS? ==> |s2.data| == 32; 
+          assert s2.RETURNS? ==> |s2.data| == 32;
           assert s2.RETURNS? ==> ByteUtils.ReadUint256(s2.data, 0) == s.Load(0);
           return s2;
         }
@@ -74,8 +71,9 @@ module ERC20 {
         {
           // mint(uint256)
 
-          // external_fun_mint_13()
-          return s1;
+          s':= external_fun_mint_13(s1);
+          assert s'.RETURNS? ==> s'.Load(0) == s.Load(0) + ByteUtils.ReadUint256(s.yul.context.callData, 4);
+          return;  
         }
 
       case _ => return Revert(0, 0, s1);
@@ -96,6 +94,7 @@ module ERC20 {
     requires s.MemSize() % 32 == 0
     ensures s'.EXECUTING?
     ensures s'.MemSize() % 32 == 0
+    ensures s'.yul.context == s.yul.context
   {
     return MLoad(64, s).0, MLoad(64, s).1;
   }
@@ -125,20 +124,18 @@ module ERC20 {
   }
 
   function shift_right_unsigned_dynamic(bits: u256, value: u256): (newValue: u256)
-    ensures bits == 0 ==> newValue == value
   {
-    assume bits == 0 ==> Shr(bits, value) == value;
     Shr(bits, value)
   }
 
-  function cleanup_from_storage_t_uint256(value: u256): (cleaned: u256) 
+  function cleanup_from_storage_t_uint256(value: u256): (cleaned: u256)
   {
     value
   }
 
   function extract_from_storage_value_dynamict_uint256(slot_value: u256, offset: u256) : (value: u256)
     requires offset as nat * 8 < TWO_256
-    // ensures value == 
+    // ensures value ==
   {
     var k := shift_right_unsigned_dynamic(Mul(offset, 8), slot_value);
     cleanup_from_storage_t_uint256(k)
@@ -161,10 +158,9 @@ module ERC20 {
   }
 
 
-  method cleanup_t_uint256(value: u256) returns (cleaned: u256)
-    ensures cleaned == value
+  function cleanup_t_uint256(value: u256): (cleaned: u256)
   {
-    cleaned := value;
+    value
   }
 
   /**
@@ -200,7 +196,6 @@ module ERC20 {
     s' := abi_encode_t_uint256_to_t_uint256_fromStack(value0,  Add(headStart, 0), s);
   }
 
-// lemma foo(s: )
 
   method external_fun_totalSupply_3(s: Executing) returns (s': State)
     requires 4 <= CallDataSize(s) as nat < TWO_255 - 4
@@ -214,146 +209,252 @@ module ERC20 {
       //  Not payable
       var s1 := revert_error_ca66f745a3ce8ff40e2ccaf1ad45db7774001b90d25810abd9040049be7bf4bb(s);
       return s1;
-    } else {
-      //  CallValue(s) == 0
-      assert CallValue(s) == 0;
-      var s1 := abi_decode_tuple_(4, CallDataSize(s), s);
-      var ret_0 :=  getter_fun_totalSupply_3(s1);
-      assert ret_0 == s1.Load(0) == s.Load(0);
-      var memPos, s2 := allocate_unbounded(s1);
-      assume memPos as nat + 32 < TWO_256;
-      //  Store ret_0 in memory at location memPos'
-      var memEnd, s3 := abi_encode_tuple_t_uint256__to_t_uint256__fromStack(memPos , ret_0, s2);
-      assert Memory.ReadUint256(s3.yul.memory, memPos as nat) == ret_0;
-      var x := RETURNS(data := Memory.Slice(s3.yul.memory, memPos as nat, (memEnd - memPos) as nat));
+    }
+    // else {
+    assert CallValue(s) == 0;
+    var s1 := abi_decode_tuple_(4, CallDataSize(s), s);
+    var ret_0 :=  getter_fun_totalSupply_3(s1);
+    assert ret_0 == s1.Load(0) == s.Load(0);
+    var memPos, s2 := allocate_unbounded(s1);
+    assume memPos as nat + 32 < TWO_256;
+    //  Store ret_0 in memory at location memPos'
+    var memEnd, s3 := abi_encode_tuple_t_uint256__to_t_uint256__fromStack(memPos , ret_0, s2);
+    assert Memory.ReadUint256(s3.yul.memory, memPos as nat) == ret_0;
+    var x := RETURNS(data := Memory.Slice(s3.yul.memory, memPos as nat, (memEnd - memPos) as nat));
 
-      assert ByteUtils.ReadUint256(x.data, 0) == Memory.ReadUint256(s3.yul.memory, memPos as nat) == s.Load(0);
-      //  Return with data = memory slice between memPos of length memEnd - memPos
+    assert ByteUtils.ReadUint256(x.data, 0) == Memory.ReadUint256(s3.yul.memory, memPos as nat) == s.Load(0);
+    //  Return with data = memory slice between memPos of length memEnd - memPos
     //   return RETURNS(data := Memory.Slice(s2.yul.memory, memPos as nat, (memEnd - memPos) as nat));
-      return x;
+    return x;
+    // }
+
+  }
+
+  function revert_error_c1322bf8034eace5e0b5c7295db60986aa89aae5e0ea0873e4689e076861a5db(s: Executing): (s': State) {
+    Revert(0, 0, s)
+  }
+
+  /**
+    *   This function does not do anything (provably).
+    */
+  function validator_revert_t_uint256(value: u256, s: Executing): (s': State)
+    ensures s' == s
+  {
+    if !Eq(value, cleanup_t_uint256(value)) then
+      assert false;
+      Revert(0, 0, s)
+    else s
+  }
+
+  method abi_decode_t_uint256(offset: u256, end: u256, s: Executing) returns (value: u256, s': State)
+    ensures s' == s
+    ensures offset < CallDataSize(s) ==> value == s.yul.context.CallDataRead(offset) == ByteUtils.ReadUint256(s.yul.context.callData, offset as nat)
+  {
+    value := CallDataLoad(offset, s);
+    s' := validator_revert_t_uint256(value, s);
+  }
+
+  method abi_decode_tuple_t_uint256(headStart: u256, dataEnd: u256, s: Executing) returns (value0: u256, s': State)
+    requires -TWO_255 <= dataEnd as int - headStart as int < TWO_255
+    ensures dataEnd as int - headStart as int >= 32 ==> s'.EXECUTING? 
+    ensures dataEnd as int - headStart as int < 32 ==> s'.ERROR? 
+    ensures s'.EXECUTING? ==> s' == s
+    ensures s'.EXECUTING? ==> value0 == ByteUtils.ReadUint256(s.yul.context.callData, headStart as nat)
+  {
+    if SLt(Sub(dataEnd, headStart), 32) {
+      s' := revert_error_dbdddcbe895c83990c08b3492a0e83918d802a52331272ac6fdb6a7c4aea3b1b(s);
+      value0 := 0;
+      return;
+    }
+    {
+
+      var offset := 0;
+      assume headStart < dataEnd <= CallDataSize(s);
+      value0, s' := abi_decode_t_uint256(Add(headStart, offset), dataEnd, s);
+      assert value0 == s.yul.context.CallDataRead(headStart) == ByteUtils.ReadUint256(s.yul.context.callData, headStart as nat);
     }
 
   }
 
-  /* ---------- calldata decoding functions ----------- */
-
-  /**
-    *    Extract the selector, the first four bytes of the calldataload.
-    */
-  function selector(s: Executing): (r: u256)
-    // ensures CallDataSize(s) >= 4 ==>
-    //  to prove: if calldatasize >= 4 then the result if the first 4 bytes
-    //  of calldataload
+  function {:opaque} abi_encode_tuple__to__fromStack(headStart: u256): (tail: u256)
+    ensures tail == headStart
   {
-    YulSem.Div(
-      CallDataLoad(0, s),
-      0x100000000000000000000000000000000000000000000000000000000)
+    Add(headStart, 0)
   }
 
-  /** test that offset if less than 160 bits */
-  function decodeAsAddress(offset: u256, s: Executing): Either<u256, State>
-    // requires offset < TWO_160
-    requires 4 + (offset as nat + 1) * 0x20 as nat < TWO_256
+  method external_fun_mint_13(s: Executing) returns (s': State)
+    requires 4 <= CallDataSize(s) as nat < TWO_255 - 4
+    requires s.MemSize() % 32 == 0
+    ensures CallDataSize(s) < 36 ==> s'.ERROR?
+    ensures CallDataSize(s) >= 36 && (s.Load(0) as nat + ByteUtils.ReadUint256(s.yul.context.callData, 4) as nat) >= TWO_256 ==> s'.ERROR?
+    ensures s'.RETURNS? || s'.ERROR?
+    // ensures s'.EXECUTING? ==> CallDataSize(s) >= 36
+    // ensures s'.EXECUTING? ==> (s.Load(0) as nat + ByteUtils.ReadUint256(s.yul.context.callData, 4) as nat) < TWO_256
+    // ensures s'.EXECUTING? ==> s'.Load(0) == s.Load(0) +  ByteUtils.ReadUint256(s.yul.context.callData, 4)
   {
-    var r := decodeAsUint(offset, s);
-    match r
-    case Left(v) =>
-      if v as nat < TWO_160 then Left(v)
-      else Right(Revert(0, 0, s))
-    case x => x
+    if CallValue(s) > 0 {
+      //  Not payable
+      s' := revert_error_ca66f745a3ce8ff40e2ccaf1ad45db7774001b90d25810abd9040049be7bf4bb(s);
+      return;
+    }
+    var param_0, s1 :=  abi_decode_tuple_t_uint256(4, CallDataSize(s), s);
+    if s1.ERROR? {
+        s' := s1;
+    } else {
+        assert CallDataSize(s) - 4 >= 32;
+        assert param_0 == ByteUtils.ReadUint256(s.yul.context.callData, 4);
+        var s2 := fun_mint_13(param_0, s1);
+        if !s2.EXECUTING? {
+            //  Overflow
+            assert s2.ERROR?;
+            assert s.Load(0) as nat + param_0 as nat >= TWO_256;
+            return s2;
+        }
+        // no Overflow 
+        assert s1.Load(0) as nat + param_0 as nat < TWO_256;
+        assert s2.Load(0) == s.Load(0) + param_0; 
+        var memPos, s3 := allocate_unbounded(s2);
+        var memEnd := abi_encode_tuple__to__fromStack(memPos);
+        assert (s.Load(0) as nat + ByteUtils.ReadUint256(s.yul.context.callData, 4) as nat) < TWO_256;
+        assert s2.Load(0) as nat == (s.Load(0) as nat + ByteUtils.ReadUint256(s.yul.context.callData, 4) as nat);
+        s' := RETURNS(data := Memory.Slice(s3.yul.memory, memPos as nat, (memEnd - memPos) as nat));
+        return;
+    }
+  }
+
+  function revert_error_42b3090547df1d2001c96683413b8cf91c1b902ef5e3cb8d9f6f304cf7446f74(s: Executing): (s': State)
+  {
+    Revert(0, 0, s)
   }
 
   /**
-    *  Decode the nth word after selector in the calldata parameters.
-    *  @param  offset  The index of the word.\*
-    *  @note            Interestingly, the Yul specification from 
-    *                   @link{https://docs.soliditylang.org/en/latest/yul.html#complete-erc20-example}
-    *                   does not account for overflows in multiplication 
-    *                   and adddition.
+    *  Another function that is the identity.
     */
-  function decodeAsUint(offset: u256, s: Executing): Either<u256, State>
-    requires 4 + (offset as nat + 1) * 0x20 as nat < TWO_256
+  function {:opaque} shift_right_0_unsigned(value: u256): (newValue: u256)
+    ensures value == newValue
   {
-    if CallDataSize(s) < Add(4, Mul(offset + 1, 0x20)) then
-      Right(Revert(0, 0, s))
-    else Left(CallDataLoad(Add(4, Mul(offset, 0x20)), s))
+    Shr(0, value)
   }
 
-  // /* ---------- calldata encoding functions ---------- */
-  // function returnUint(v) {
-  //     mstore(0, v)
-  //     return(0, 0x20)
-  // }
-  // function returnTrue() {
-  //     returnUint(1)
-  // }
+  function extract_from_storage_value_offset_0t_uint256(slot_value: u256): (value: u256)
+  {
+    cleanup_from_storage_t_uint256(shift_right_0_unsigned(slot_value))
+  }
 
-  /* -------- storage layout ---------- */
-  //   function ownerPos(): u256 { 0 }
+  function read_from_storage_split_offset_0_t_uint256(slot: u256, s: Executing): (value: u256)
+  {
+    extract_from_storage_value_offset_0t_uint256(SLoad(slot, s))
+  }
 
-  //   function totalSupplyPos(): u256  { 1 }
+  function panic_error_0x11(s: Executing): (s': State)
+    requires s.MemSize() % 32 == 0
+  {
+    var s1 := MStore(0, 35408467139433450592217433187231851964531694900788300625387963629091585785856, s);
+    var s2 := MStore(4, 0x11, s1);
+    Revert(0, 0x24, s2)
+  }
 
-  /**
-    *   Storage slot for an account.
-    */
-  //   function AccountToStorageOffset(account: u256): u256
-  //     requires account as nat < TWO_256 - 0x1000
-  //   {
-  //     Add(0x1000, account)
-  //   }
+  lemma NSCOverFlowU256(x: u256, y: u256)
+    ensures x as nat + y as nat < TWO_256 ==> YulSem.Add(x, y) as nat == x as nat + y as nat
+    ensures YulSem.Add(x ,y) >= x ==> x as nat + y as nat < TWO_256
+    ensures x as nat + y as nat < TWO_256 <==> YulSem.Add(x ,y) >= x
+    ensures x as nat + y as nat < TWO_256 <==> !Gt(x, YulSem.Add(x ,y))
+  {
+  }
 
-  /**   
-    *  Storage slot of allowance for an account.
-    */
-  //   function AllowanceStorageOffset(account: u256, spender: u256, s: Executing): (r:   (u256, State))
-  //     requires account as nat < TWO_256 - 0x1000
-  //     requires s.MemSize() % 32 == 0
-  //     ensures r.1.EXECUTING?
-  //     ensures r.1.MemSize() % 32 == 0
-  //   {
-  //     var offset := AccountToStorageOffset(account);
-  //     var s1 := MStore(0, offset, s);
-  //     var s2 := MStore(0x20, spender, s);
-  //     Keccak256(0, 0x40, s2)
-  //   }
 
-  /* -------- storage access ---------- */
-  // function owner() -> o {
-  //     o := sload(ownerPos())
-  // }
-  // function totalSupply() -> supply {
-  //     supply := sload(totalSupplyPos())
-  // }
-  // function mintTokens(amount) {
-  //     sstore(totalSupplyPos(), safeAdd(totalSupply(), amount))
-  // }
-  //   function balanceOf(account: u256, s: Executing): u256
-  //     requires account as nat < TWO_256 - 0x1000
-  //   {
-  //     SLoad(AccountToStorageOffset(account), s)
-  //   }
-  // function addToBalance(account, amount) {
-  //     let offset := accountToStorageOffset(account)
-  //     sstore(offset, safeAdd(sload(offset), amount))
-  // }
-  // function deductFromBalance(account, amount) {
-  //     let offset := accountToStorageOffset(account)
-  //     let bal := sload(offset)
-  //     require(lte(amount, bal))
-  //     sstore(offset, sub(bal, amount))
-  // }
-  // function allowance(account, spender) -> amount {
-  //     amount := sload(allowanceStorageOffset(account, spender))
-  // }
-  // function setAllowance(account, spender, amount) {
-  //     sstore(allowanceStorageOffset(account, spender), amount)
-  // }
-  // function decreaseAllowanceBy(account, spender, amount) {
-  //     let offset := allowanceStorageOffset(account, spender)
-  //     let currentAllowance := sload(offset)
-  //     require(lte(amount, currentAllowance))
-  //     sstore(offset, sub(currentAllowance, amount))
-  // }
+  method checked_add_t_uint256(x: u256, y: u256, s: Executing) returns (sum: u256, s': State)
+    requires s.MemSize() % 32 == 0
+    ensures x as nat + y as nat < TWO_256 <==> s'.EXECUTING?
+    ensures x as nat + y as nat >= TWO_256 <==> s'.ERROR?
+    ensures x as nat + y as nat < TWO_256 <==> sum as nat == x as nat + y as nat 
+    ensures s'.EXECUTING? ==> s'.MemSize() == s.MemSize()
+  {
+    var x1 := cleanup_t_uint256(x);
+    var y1 := cleanup_t_uint256(y);
+    sum := YulSem.Add(x1, y1);
+    NSCOverFlowU256(x1, sum);
+    s' := s;
+    if Gt(x1, sum) {
+      assert x as nat + y as nat >= TWO_256;
+      return 0, panic_error_0x11(s);
+    }
+    assert x as nat + y as nat < TWO_256;
+    assert s'.EXECUTING?;
+  }
+
+  function {:opaque} shift_left_0(value: u256): (newValue: u256)
+    ensures newValue == value
+  {
+    Shl(0, value)
+
+  }
+
+  function {:opaque} update_byte_slice_32_shift_0(value: u256, toInsert: u256): (result: u256)
+    ensures result == toInsert
+  {
+    // 64 fs => TWO_256 - 1
+    var mask := 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
+    var toInsert_ := shift_left_0(toInsert);
+    assert toInsert_ == toInsert;
+    var value_ := And(value, Not(mask));
+    assert value_ == 0;
+    foo211(toInsert, mask);
+    assert And(toInsert_, mask) == toInsert;
+    assert Or(value_, And(toInsert_, mask)) == toInsert;
+    Or(value_, And(toInsert_, mask))
+  }
+
+  function identity(value: u256): (ret:u256)
+  {
+    value
+  }
+
+  function convert_t_uint256_to_t_uint256(value: u256): (converted: u256)
+    ensures converted == value
+  {
+    cleanup_t_uint256(identity(cleanup_t_uint256(value)))
+  }
+
+  function prepare_store_t_uint256(value: u256): (ret: u256)
+  {
+    value
+  }
+
+  function update_storage_value_offset_0t_uint256_to_t_uint256(slot: u256, value_0: u256, s: Executing) : (s': State)
+    requires s.MemSize() % 32 == 0
+    ensures s'.EXECUTING?
+    ensures s'.Load(slot) == value_0
+    ensures s'.MemSize() == s.MemSize()
+  {
+    var convertedValue_0 := convert_t_uint256_to_t_uint256(value_0);
+    assert convertedValue_0 == value_0;
+    var k := update_byte_slice_32_shift_0(SLoad(slot, s), prepare_store_t_uint256(convertedValue_0));
+    assert k == convertedValue_0;
+    SStore(slot, update_byte_slice_32_shift_0(SLoad(slot, s), prepare_store_t_uint256(convertedValue_0)), s)
+  }
+
+  method fun_mint_13(var_amount_5: u256, s: Executing) returns (s': State)
+    requires s.MemSize() % 32 == 0
+    ensures s'.EXECUTING? <==> s.Load(0) as nat + var_amount_5 as nat < TWO_256
+    ensures s'.EXECUTING? ==> s'.Load(0) == s.Load(0) + var_amount_5
+    ensures s'.EXECUTING? ==> s'.MemSize() % 32 == 0
+    ensures s'.ERROR? || s'.EXECUTING?
+  {
+    /// @src 0:1314:1320  "amount"
+    var v_1 := var_amount_5;
+    var expr_9 := v_1;
+    /// @src 0:1299:1320  "totalSupply += amount"
+    var v_2 := read_from_storage_split_offset_0_t_uint256(0x00, s);
+    assert v_2 == s.Load(0x00);
+    var expr_10, s1 := checked_add_t_uint256(v_2, expr_9, s);
+    if s1.EXECUTING? {
+        assert s1.MemSize() % 32 == 0;
+      s' := update_storage_value_offset_0t_uint256_to_t_uint256(0x00, expr_10, s1);
+    } else {
+      s' := s1;
+    }
+  }
 
 }
 
