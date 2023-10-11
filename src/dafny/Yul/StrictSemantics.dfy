@@ -17,7 +17,7 @@ include "../../../libs/evm-dafny/src/dafny/core/memory.dfy"
 include "../../../libs/evm-dafny/src/dafny/core/context.dfy"
 include "../../../libs/evm-dafny/src/dafny/bytecode.dfy"
 include "./Semantics.dfy"
-include "State.dfy"
+include "./State.dfy"
 include "./CommonSem.dfy"
 
 /**
