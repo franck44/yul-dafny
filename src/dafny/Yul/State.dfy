@@ -108,7 +108,7 @@ module YulState {
       requires this.EXECUTING?
     {
       var account := yul.context.address;
-      yul.world.Read(account,address)
+      yul.world.Read(account, address)
     }
 
     /**
