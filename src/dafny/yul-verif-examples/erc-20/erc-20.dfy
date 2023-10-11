@@ -489,12 +489,10 @@ module ERC20 {
     var v_2 := read_from_storage_split_offset_0_t_uint256(0x00, s);
     assert v_2 == s.SLoad(0x00);
     var expr_10, s1 := checked_add_t_uint256(v_2, expr_9, s);
-    if s1.EXECUTING? {
-      //   assert s1.MemSize() % 32 == 0;
-      s' := update_storage_value_offset_0t_uint256_to_t_uint256(0x00, expr_10, s1);
-    } else {
-      s' := s1;
+    if s1.ERROR? {
+        return s1;
     }
+    s' := update_storage_value_offset_0t_uint256_to_t_uint256(0x00, expr_10, s1);
   }
 
 }
