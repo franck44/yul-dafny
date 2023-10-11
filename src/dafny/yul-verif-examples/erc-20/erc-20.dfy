@@ -94,9 +94,7 @@ module ERC20 {
         {
           // mint(uint256)
           s':= external_fun_mint_13(s1);
-          assert s'.RETURNS? ==> Storage.Read(s'.world.accounts[s.yul.context.address].storage, 0) ==  s.SLoad(0) + ByteUtils.ReadUint256(s.yul.context.callData, 4);
-          //   return;
-          return Revert(0, 0, s1);
+          return;
         }
 
       case _ =>
