@@ -21,6 +21,7 @@ include "../../Yul/StrictSemantics.dfy"
 module maxYul {
 
   import opened Int
+  import ByteUtils
   import opened YulStrict
   import opened YulState
 
@@ -44,23 +45,24 @@ module maxYul {
     */
   method Main(s: Executing) returns (s': State)  
     requires s.MemSize() % 32 == 0
-    ensures s'.EXECUTING?
-    ensures s'.MemSize() > 0x40 + 31
-    // ensures Memory.ReadUint256(m', 0x40) == 8
+    ensures s'.RETURNS?
+    ensures ByteUtils.ReadUint256(s'.data, 0) == 8
   {
     var x := 8;                     //  let
     var y := 3;                     //  let
     var z, s1 := Max(x, y, s);      //  funcall. Returns result ans new memory.
-    s' := MStore(0x40, z, s1);      //  memory store
+    var s2 := MStore(0x40, z, s1);  //  memory store
+    return Return(0x40, 32, s2);    //  return result
   }
 
   /**
     *  Run the code. 
     */
-  method {:main} {:verify false} Test()  
+  method {:main} {:verify true} Test()  
   {
     var s := Main(YulState.Init());
-    print s.Read(0x40), "\n";
+    assert s.RETURNS?;
+    print ByteUtils.ReadUint256(s.data, 0), "\n";
   }
 
 }
