@@ -221,9 +221,7 @@ module CommonSem {
     *     
     */
   function MLoad(address: u256, s: Executing): (s': (u256, State))
-    requires s.MemSize() % 32 == 0
     ensures s'.1.EXECUTING?
-    ensures s'.1.MemSize() % 32 == 0
     ensures s'.1.MemSize() > address as nat + 31
     ensures s'.1.yul.context == s.yul.context
     ensures s'.1.yul.world == s.yul.world
@@ -246,9 +244,7 @@ module CommonSem {
     *     
     */
   function MStore(address: u256, value: u256, s: Executing): (s': State)
-    requires s.MemSize() % 32 == 0
     ensures s'.EXECUTING?
-    ensures s'.MemSize() % 32 == 0
     ensures s'.MemSize() > address as nat + 31
     ensures s'.yul.context == s.yul.context
     ensures s'.yul.world == s.yul.world
