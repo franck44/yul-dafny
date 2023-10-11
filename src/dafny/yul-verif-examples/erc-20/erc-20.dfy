@@ -27,22 +27,31 @@ module ERC20 {
   import opened YulState
   import ByteUtils
 
-  datatype Either<A, B> = Left(val: A) | Right(error: B)
+  const TotalSupplySelector: u256 := 0x18160ddd
+  const MintSelector: u256 := 0xa0712d68
 
-  predicate GInv(s: Executing)
+  function {:opaque} Selector(s: Executing): u256
+    requires CallDataSize(s) >= 4
   {
-    true
-    // totalSupply ==
-    //  some of balances should be total supply
+    shift_right_224_unsigned(CallDataLoad(0, s))
   }
 
-  method Main(s: Executing, ghost totalSupply: u256) returns (s': State)
-    requires totalSupply == s.Load(0)
-    requires s.MemSize() % 32 == 0
-    requires 4 <= CallDataSize(s) as nat < TWO_255 - 4
-    ensures CallDataSize(s) < 4 ==> s'.ERROR?
-    ensures CallDataSize(s) >= 4 && shift_right_224_unsigned(CallDataLoad(0, s)) == 0x18160ddd ==> ByteUtils.ReadUint256(s'.data, 0) == s.Load(0)
-    ensures CallDataSize(s) >= 36 && shift_right_224_unsigned(CallDataLoad(0, s)) == 0xa0712d68 && (s.Load(0) as nat + ByteUtils.ReadUint256(s.yul.context.callData, 4) as nat) < TWO_256 ==> s'.RETURNS?
+  method Main(s: Executing) returns (s': State)
+    requires TWO_255 - 1 > CallDataSize(s) as nat
+
+    ensures s'.RETURNS? || s'.ERROR?
+    ensures CallDataSize(s) < 4 ==> s'.ERROR? 
+
+    /** Accounts are not modified. */
+    ensures s'.RETURNS? ==> s.yul.world.accounts == s'.world.accounts
+    ensures s'.RETURNS? ==> CallDataSize(s) as nat >= 4
+
+    ensures CallDataSize(s) as nat >= 4 && Selector(s) == TotalSupplySelector && CallValue(s) == 0 ==> s'.RETURNS?
+    // ensures CallDataSize(s) >= 36 && Selector(s) == MintSelector && (s.Load(0) as nat + ByteUtils.ReadUint256(s.yul.context.callData, 4) as nat) < TWO_256 ==> s'.RETURNS?
+    ensures s'.RETURNS? && Selector(s) == TotalSupplySelector ==> Storage.Read(s'.world.accounts[s.yul.context.address].storage, 0) ==  s.SLoad(0)
+    ensures s'.RETURNS? && Selector(s) == TotalSupplySelector ==> s'.RETURNS? ==> ByteUtils.ReadUint256(s'.data, 0) == s.SLoad(0)
+    // ensures s'.RETURNS? && Selector(s) == MintSelector ==> Storage.Read(s'.world.accounts[account].storage, 0) ==  s.SLoad(0) + ByteUtils.ReadUint256(s.yul.context.callData, 4)
+    // ensures (CallDataSize(s) < 4 || (Selector(s) !=  TotalSupplySelector && Selector(s) != MintSelector)) ==> s'.ERROR?
   {
 
     // var s1 := MStore(64, MemoryGuard(128), s);
@@ -54,29 +63,30 @@ module ERC20 {
       //  There is enough calldata for a 4-byte selector
       assert CallDataSize(s1) >= 4;
       //  Extract selector
-      var selector := shift_right_224_unsigned(CallDataLoad(0, s1));
+      var selector: u256 := Selector(s1);
       match selector
 
-      case 0x18160ddd =>
+      case TotalSupplySelector =>
         {
           // totalSupply()
-
-          var s2 := external_fun_totalSupply_3(s1);
-          assert s2.RETURNS? ==> |s2.data| == 32;
-          assert s2.RETURNS? ==> ByteUtils.ReadUint256(s2.data, 0) == s.Load(0);
-          return s2;
+          s' := external_fun_totalSupply_3(s1);
+          return;
         }
 
-      case 0xa0712d68 =>
+      case MintSelector =>
         {
           // mint(uint256)
-
+          // //   assert false;
+          //     assume CallDataSize(s1) as nat < TWO_255 - 1;
           s':= external_fun_mint_13(s1);
-          assert s'.RETURNS? ==> s'.Load(0) == s.Load(0) + ByteUtils.ReadUint256(s.yul.context.callData, 4);
-          return;  
+          assert s'.RETURNS? ==> Storage.Read(s'.world.accounts[s.yul.context.address].storage, 0) ==  s.SLoad(0) + ByteUtils.ReadUint256(s.yul.context.callData, 4);
+          //   return;
+          return Revert(0, 0, s1);
         }
 
-      case _ => return Revert(0, 0, s1);
+      case _ =>
+        // assert false;
+        return Revert(0, 0, s1);
 
     }
     assert CallDataSize(s1) < 4;
@@ -86,15 +96,14 @@ module ERC20 {
   /** Get leftmost 4-bytes of a u256. */
   function shift_right_224_unsigned(value: u256): (newValue: u256)
   {
-    Shr(224, value)
+    Shr(value, 224)
   }
 
   /** Get the free memory pointer. */
   method allocate_unbounded(s: Executing) returns (memPtr: u256, s': State)
-    requires s.MemSize() % 32 == 0
     ensures s'.EXECUTING?
-    ensures s'.MemSize() % 32 == 0
     ensures s'.yul.context == s.yul.context
+    ensures s'.yul.world == s.yul.world
   {
     return MLoad(64, s).0, MLoad(64, s).1;
   }
@@ -125,7 +134,7 @@ module ERC20 {
 
   function shift_right_unsigned_dynamic(bits: u256, value: u256): (newValue: u256)
   {
-    Shr(bits, value)
+    Shr(value, bits)
   }
 
   function cleanup_from_storage_t_uint256(value: u256): (cleaned: u256)
@@ -135,7 +144,6 @@ module ERC20 {
 
   function extract_from_storage_value_dynamict_uint256(slot_value: u256, offset: u256) : (value: u256)
     requires offset as nat * 8 < TWO_256
-    // ensures value ==
   {
     var k := shift_right_unsigned_dynamic(Mul(offset, 8), slot_value);
     cleanup_from_storage_t_uint256(k)
@@ -143,14 +151,14 @@ module ERC20 {
 
   function read_from_storage_split_dynamic_t_uint256(slot: u256, offset: u256, s: Executing): (value: u256)
     requires offset as nat * 8 < TWO_256
-    ensures offset == 0 ==> value == s.Load(slot)
+    ensures offset == 0 ==> value == s.SLoad(slot)
   {
     extract_from_storage_value_dynamict_uint256(SLoad(slot, s), offset)
   }
 
 
   method getter_fun_totalSupply_3(s: Executing) returns (ret: u256)
-    ensures ret == s.Load(0)
+    ensures ret == s.SLoad(0)
   {
     var slot := 0;
     var offset := 0;
@@ -167,9 +175,7 @@ module ERC20 {
     *  Store value at address pos in Memory.
     */
   method abi_encode_t_uint256_to_t_uint256_fromStack(value: u256, pos: u256, s: Executing) returns (s': State)
-    requires s.MemSize() % 32 == 0
     ensures s'.EXECUTING?
-    ensures s'.MemSize() % 32 == 0
     ensures s'.MemSize() > pos as nat + 31
     ensures s'.yul.context == s.yul.context
     ensures s'.yul.world == s.yul.world
@@ -184,13 +190,12 @@ module ERC20 {
     *  next available? memory slot (23-bytes)
     */
   method abi_encode_tuple_t_uint256__to_t_uint256__fromStack(headStart: u256 , value0: u256, s: Executing) returns (tail: u256, s': State)
-    requires s.MemSize() % 32 == 0
     requires headStart as nat + 32 < TWO_256
     ensures s'.EXECUTING?
-    ensures s'.MemSize() % 32 == 0
     ensures tail == headStart + 32
     ensures headStart as nat + 31 < s'.MemSize()
     ensures Memory.ReadUint256(s'.yul.memory, headStart as nat) == value0
+    ensures s'.yul.world == s.yul.world
   {
     tail := Add(headStart, 32);
     s' := abi_encode_t_uint256_to_t_uint256_fromStack(value0,  Add(headStart, 0), s);
@@ -199,10 +204,14 @@ module ERC20 {
 
   method external_fun_totalSupply_3(s: Executing) returns (s': State)
     requires 4 <= CallDataSize(s) as nat < TWO_255 - 1
-    requires s.MemSize() % 32 == 0
+
+    ensures CallValue(s) > 0 <==> s'.ERROR?
     ensures s'.ERROR? || s'.RETURNS?
     ensures s'.RETURNS? ==> |s'.data| == 32
-    ensures s'.RETURNS? ==> ByteUtils.ReadUint256(s'.data, 0) == s.Load(0)
+    ensures s'.RETURNS? ==> ByteUtils.ReadUint256(s'.data, 0) == s.SLoad(0)
+    ensures s'.RETURNS? ==> s.yul.world.accounts == s'.world.accounts
+    ensures s'.RETURNS? ==> Storage.Read(s'.world.accounts[s.yul.context.address].storage, 0) == s.SLoad(0)
+    // Storage.Read(s'.world.accounts[s.yul.context.address].storage, 0) ==  s.SLoad(0);
     // ensures
   {
     if CallValue(s) > 0 {
@@ -214,15 +223,19 @@ module ERC20 {
     assert CallValue(s) == 0;
     var s1 := abi_decode_tuple_(4, CallDataSize(s), s);
     var ret_0 :=  getter_fun_totalSupply_3(s1);
-    assert ret_0 == s1.Load(0) == s.Load(0);
+    assert ret_0 == s1.SLoad(0) == s.SLoad(0);
     var memPos, s2 := allocate_unbounded(s1);
     assume memPos as nat + 32 < TWO_256;
     //  Store ret_0 in memory at location memPos'
     var memEnd, s3 := abi_encode_tuple_t_uint256__to_t_uint256__fromStack(memPos , ret_0, s2);
     assert Memory.ReadUint256(s3.yul.memory, memPos as nat) == ret_0;
-    var x := RETURNS(data := Memory.Slice(s3.yul.memory, memPos as nat, (memEnd - memPos) as nat));
+    // var x := RETURNS(data := Memory.Slice(s3.yul.memory, memPos as nat, (memEnd - memPos) as nat));
+    var x := Return(memPos, memEnd - memPos, s3);
 
-    assert ByteUtils.ReadUint256(x.data, 0) == Memory.ReadUint256(s3.yul.memory, memPos as nat) == s.Load(0);
+    assert s.yul.context.address in x.world.accounts;
+    assert ByteUtils.ReadUint256(x.data, 0) == Memory.ReadUint256(s3.yul.memory, memPos as nat) == s.SLoad(0);
+    assert x.world.accounts == s.yul.world.accounts;
+    assert Storage.Read(x.world.accounts[s.yul.context.address].storage, 0) == s.SLoad(0);
     //  Return with data = memory slice between memPos of length memEnd - memPos
     //   return RETURNS(data := Memory.Slice(s2.yul.memory, memPos as nat, (memEnd - memPos) as nat));
     return x;
@@ -256,8 +269,8 @@ module ERC20 {
 
   method abi_decode_tuple_t_uint256(headStart: u256, dataEnd: u256, s: Executing) returns (value0: u256, s': State)
     requires -TWO_255 <= dataEnd as int - headStart as int < TWO_255
-    ensures dataEnd as int - headStart as int >= 32 ==> s'.EXECUTING? 
-    ensures dataEnd as int - headStart as int < 32 ==> s'.ERROR? 
+    ensures dataEnd as int - headStart as int >= 32 ==> s'.EXECUTING?
+    ensures dataEnd as int - headStart as int < 32 ==> s'.ERROR?
     ensures s'.EXECUTING? ==> s' == s
     ensures s'.EXECUTING? ==> value0 == ByteUtils.ReadUint256(s.yul.context.callData, headStart as nat)
   {
@@ -267,7 +280,6 @@ module ERC20 {
       return;
     }
     {
-
       var offset := 0;
       assume headStart < dataEnd <= CallDataSize(s);
       value0, s' := abi_decode_t_uint256(Add(headStart, offset), dataEnd, s);
@@ -284,13 +296,14 @@ module ERC20 {
 
   method external_fun_mint_13(s: Executing) returns (s': State)
     requires 4 <= CallDataSize(s) as nat < TWO_255 - 1
-    requires s.MemSize() % 32 == 0
     ensures CallDataSize(s) < 36 ==> s'.ERROR?
-    ensures CallDataSize(s) >= 36 && (s.Load(0) as nat + ByteUtils.ReadUint256(s.yul.context.callData, 4) as nat) >= TWO_256 ==> s'.ERROR?
+    ensures CallDataSize(s) >= 36 && (s.SLoad(0) as nat + ByteUtils.ReadUint256(s.yul.context.callData, 4) as nat) >= TWO_256 ==> s'.ERROR?
     ensures s'.RETURNS? || s'.ERROR?
+    ensures s'.RETURNS? ==> s'.world.accounts.Keys == s.yul.world.accounts.Keys
+    ensures  s'.RETURNS? ==> Storage.Read(s'.world.accounts[s.yul.context.address].storage, 0) ==  s.SLoad(0) + ByteUtils.ReadUint256(s.yul.context.callData, 4)
     // ensures s'.EXECUTING? ==> CallDataSize(s) >= 36
-    // ensures s'.EXECUTING? ==> (s.Load(0) as nat + ByteUtils.ReadUint256(s.yul.context.callData, 4) as nat) < TWO_256
-    // ensures s'.EXECUTING? ==> s'.Load(0) == s.Load(0) +  ByteUtils.ReadUint256(s.yul.context.callData, 4)
+    // ensures s'.EXECUTING? ==> (s.SLoad(0) as nat + ByteUtils.ReadUint256(s.yul.context.callData, 4) as nat) < TWO_256
+    // ensures s'.EXECUTING? ==> s'.Load(0) == s.SLoad(0) +  ByteUtils.ReadUint256(s.yul.context.callData, 4)
   {
     if CallValue(s) > 0 {
       //  Not payable
@@ -299,26 +312,46 @@ module ERC20 {
     }
     var param_0, s1 :=  abi_decode_tuple_t_uint256(4, CallDataSize(s), s);
     if s1.ERROR? {
-        s' := s1;
+      s' := s1;
     } else {
-        assert CallDataSize(s) - 4 >= 32;
-        assert param_0 == ByteUtils.ReadUint256(s.yul.context.callData, 4);
-        var s2 := fun_mint_13(param_0, s1);
-        if !s2.EXECUTING? {
-            //  Overflow
-            assert s2.ERROR?;
-            assert s.Load(0) as nat + param_0 as nat >= TWO_256;
-            return s2;
-        }
-        // no Overflow 
-        assert s1.Load(0) as nat + param_0 as nat < TWO_256;
-        assert s2.Load(0) == s.Load(0) + param_0; 
-        var memPos, s3 := allocate_unbounded(s2);
-        var memEnd := abi_encode_tuple__to__fromStack(memPos);
-        assert (s.Load(0) as nat + ByteUtils.ReadUint256(s.yul.context.callData, 4) as nat) < TWO_256;
-        assert s2.Load(0) as nat == (s.Load(0) as nat + ByteUtils.ReadUint256(s.yul.context.callData, 4) as nat);
-        s' := RETURNS(data := Memory.Slice(s3.yul.memory, memPos as nat, (memEnd - memPos) as nat));
-        return;
+      assert CallDataSize(s) - 4 >= 32;
+      assert param_0 == ByteUtils.ReadUint256(s.yul.context.callData, 4);
+      var s2 := fun_mint_13(param_0, s1);
+      if !s2.EXECUTING? {
+        //  Overflow
+        assert s2.ERROR?;
+        assert s.SLoad(0) as nat + param_0 as nat >= TWO_256;
+        return s2;
+      }
+      // no Overflow
+      assert s1.SLoad(0) as nat + param_0 as nat < TWO_256;
+      assert s2.SLoad(0) == s.SLoad(0) + param_0;
+      var memPos, s3 := allocate_unbounded(s2);
+      var memEnd := abi_encode_tuple__to__fromStack(memPos);
+            assert s.yul.world.accounts.Keys == s3.yul.world.accounts.Keys;
+
+      assert (s.SLoad(0) as nat + ByteUtils.ReadUint256(s.yul.context.callData, 4) as nat) < TWO_256;
+      assert s3.SLoad(0) as nat == (s.SLoad(0) as nat + ByteUtils.ReadUint256(s.yul.context.callData, 4) as nat);
+      // s' := RETURNS(data := Memory.Slice(s3.yul.memory, memPos as nat, (memEnd - memPos) as nat));
+      assert memPos == memEnd;
+      s' := Return(memPos, memEnd - memPos, s3);
+      assert |s'.data| == 0;
+      //   assume memPos == 0;
+      assume s.yul.context.address in s'.world.accounts;
+      assume s.yul.context.address in s3.yul.world.accounts;
+      assume s.yul.world.accounts.Keys == s'.world.accounts.Keys;
+
+      assert Storage.Read(s'.world.accounts[s.yul.context.address].storage, 0) ==  Storage.Read(s3.yul.world.accounts[s.yul.context.address].storage, 0);
+
+      assume s3.yul.context.address == s.yul.context.address;
+      assert s3.SLoad(0) == Storage.Read(s3.yul.world.accounts[s.yul.context.address].storage, 0);
+      assert Storage.Read(s3.yul.world.accounts[s.yul.context.address].storage, 0) as nat ==
+             (s.SLoad(0) as nat + ByteUtils.ReadUint256(s.yul.context.callData, 4) as nat);
+
+      assert s3.yul.world == s'.world;
+
+      assert Storage.Read(s'.world.accounts[s.yul.context.address].storage, 0) ==  s.SLoad(0) + ByteUtils.ReadUint256(s.yul.context.callData, 4);
+      return;
     }
   }
 
@@ -333,7 +366,7 @@ module ERC20 {
   function {:opaque} shift_right_0_unsigned(value: u256): (newValue: u256)
     ensures value == newValue
   {
-    Shr(0, value)
+    Shr(value, 0)
   }
 
   function extract_from_storage_value_offset_0t_uint256(slot_value: u256): (value: u256)
@@ -347,7 +380,6 @@ module ERC20 {
   }
 
   function panic_error_0x11(s: Executing): (s': State)
-    requires s.MemSize() % 32 == 0
   {
     var s1 := MStore(0, 35408467139433450592217433187231851964531694900788300625387963629091585785856, s);
     var s2 := MStore(4, 0x11, s1);
@@ -364,11 +396,11 @@ module ERC20 {
 
 
   method checked_add_t_uint256(x: u256, y: u256, s: Executing) returns (sum: u256, s': State)
-    requires s.MemSize() % 32 == 0
     ensures x as nat + y as nat < TWO_256 <==> s'.EXECUTING?
     ensures x as nat + y as nat >= TWO_256 <==> s'.ERROR?
-    ensures x as nat + y as nat < TWO_256 <==> sum as nat == x as nat + y as nat 
+    ensures x as nat + y as nat < TWO_256 <==> sum as nat == x as nat + y as nat
     ensures s'.EXECUTING? ==> s'.MemSize() == s.MemSize()
+    ensures s'.EXECUTING? ==> s'.yul.world.accounts.Keys == s.yul.world.accounts.Keys
   {
     var x1 := cleanup_t_uint256(x);
     var y1 := cleanup_t_uint256(y);
@@ -386,7 +418,7 @@ module ERC20 {
   function {:opaque} shift_left_0(value: u256): (newValue: u256)
     ensures newValue == value
   {
-    Shl(0, value)
+    Shl(value, 0)
 
   }
 
@@ -399,7 +431,7 @@ module ERC20 {
     assert toInsert_ == toInsert;
     var value_ := And(value, Not(mask));
     assert value_ == 0;
-    foo211(toInsert, mask);
+    XAnd1IsX(toInsert, mask);
     assert And(toInsert_, mask) == toInsert;
     assert Or(value_, And(toInsert_, mask)) == toInsert;
     Or(value_, And(toInsert_, mask))
@@ -422,9 +454,8 @@ module ERC20 {
   }
 
   function update_storage_value_offset_0t_uint256_to_t_uint256(slot: u256, value_0: u256, s: Executing) : (s': State)
-    requires s.MemSize() % 32 == 0
     ensures s'.EXECUTING?
-    ensures s'.Load(slot) == value_0
+    ensures s'.SLoad(slot) == value_0
     ensures s'.MemSize() == s.MemSize()
   {
     var convertedValue_0 := convert_t_uint256_to_t_uint256(value_0);
@@ -435,21 +466,20 @@ module ERC20 {
   }
 
   method fun_mint_13(var_amount_5: u256, s: Executing) returns (s': State)
-    requires s.MemSize() % 32 == 0
-    ensures s'.EXECUTING? <==> s.Load(0) as nat + var_amount_5 as nat < TWO_256
-    ensures s'.EXECUTING? ==> s'.Load(0) == s.Load(0) + var_amount_5
-    ensures s'.EXECUTING? ==> s'.MemSize() % 32 == 0
+    ensures s'.EXECUTING? <==> s.SLoad(0) as nat + var_amount_5 as nat < TWO_256
+    ensures s'.EXECUTING? ==> s'.SLoad(0) == s.SLoad(0) + var_amount_5
+    ensures s'.EXECUTING? ==> s'.yul.world.accounts.Keys == s.yul.world.accounts.Keys
     ensures s'.ERROR? || s'.EXECUTING?
   {
-    /// @src 0:1314:1320  "amount"
+/// @src 0:1314:1320  "amount"
     var v_1 := var_amount_5;
     var expr_9 := v_1;
-    /// @src 0:1299:1320  "totalSupply += amount"
+/// @src 0:1299:1320  "totalSupply += amount"
     var v_2 := read_from_storage_split_offset_0_t_uint256(0x00, s);
-    assert v_2 == s.Load(0x00);
+    assert v_2 == s.SLoad(0x00);
     var expr_10, s1 := checked_add_t_uint256(v_2, expr_9, s);
     if s1.EXECUTING? {
-        assert s1.MemSize() % 32 == 0;
+      //   assert s1.MemSize() % 32 == 0;
       s' := update_storage_value_offset_0t_uint256_to_t_uint256(0x00, expr_10, s1);
     } else {
       s' := s1;
