@@ -78,11 +78,7 @@ module ERC20 {
     //  Overflow result in a revert.
     ensures CallDataSize(s) >= 36 && Selector(s) == MintSelector && CallValue(s) == 0 && (s.SLoad(0) as nat + CallDataLoad(4, s) as nat) >= TWO_256 ==> s'.ERROR?
   {
-
-    // var s1 := MStore(64, MemoryGuard(128), s);
-    // assert s1.Read(64) == 128;
-    // assert CallDataSize(s1) == CallDataSize(s);
-    var s1 := s;
+    var s1 := MStore(64, MemoryGuard(128), s);
 
     if !Lt(CallDataSize(s1), 4) {
       //  There is enough calldata for a 4-byte selector
@@ -105,9 +101,7 @@ module ERC20 {
           return;
         }
 
-      case _ =>
-        // assert false;
-        return Revert(0, 0, s1);
+      case _ => return Revert(0, 0, s1);
 
     }
     //  Here we should revert as the calldataload does not have enough bytes.
@@ -266,19 +260,7 @@ module ERC20 {
     var ret_0 :=  getter_fun_totalSupply_3(s1);
     var memPos, s2 := allocate_unbounded(s1);
     var memEnd, s3 := abi_encode_tuple_t_uint256__to_t_uint256__fromStack(memPos , ret_0, s2);
-    assert Memory.ReadUint256(s3.yul.memory, memPos as nat) == ret_0;
-    // var x := RETURNS(data := Memory.Slice(s3.yul.memory, memPos as nat, (memEnd - memPos) as nat));
-    var x := Return(memPos, memEnd - memPos, s3);
-
-    assert s.yul.context.address in x.world.accounts;
-    assert ByteUtils.ReadUint256(x.data, 0) == Memory.ReadUint256(s3.yul.memory, memPos as nat) == s.SLoad(0);
-    assert x.world.accounts == s.yul.world.accounts;
-    assert Storage.Read(x.world.accounts[s.yul.context.address].storage, 0) == s.SLoad(0);
-    //  Return with data = memory slice between memPos of length memEnd - memPos
-    //   return RETURNS(data := Memory.Slice(s2.yul.memory, memPos as nat, (memEnd - memPos) as nat));
-    return x;
-    // }
-
+    return Return(memPos, memEnd - memPos, s3);
   }
 
   function revert_error_c1322bf8034eace5e0b5c7295db60986aa89aae5e0ea0873e4689e076861a5db(s: Executing): (s': State) {
