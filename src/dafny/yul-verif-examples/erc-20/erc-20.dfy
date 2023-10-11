@@ -135,7 +135,13 @@ module ERC20 {
     return Revert(0, 0, s);
   }
 
-
+  /**
+    *   Check interval between two numbers.
+    *   @param  headStart   
+    *   @param  dataEnd
+    *   @param  s          A state.
+    *   @returns           `revert` if dataEnd < headStart and `s` otherwise.
+    */
   method abi_decode_tuple_(headStart: u256, dataEnd: u256, s: Executing) returns (s': State)
     requires -TWO_255 <= dataEnd as int - headStart as int < TWO_255
     ensures headStart <= dataEnd ==> s' == s
