@@ -27,19 +27,36 @@ module ERC20 {
   import opened YulState
   import ByteUtils
 
+  /**
+    *   The selector for the two function totalSupply (getter) and mint.
+    */
   const TotalSupplySelector: u256 := 0x18160ddd
   const MintSelector: u256 := 0xa0712d68
 
-  function {:opaque} Selector(s: Executing): u256
+  /**
+    *  Extract selector from calldata.
+    *  @param  s   A Yul state.
+    *  @returns    The first 4 bytes of the calldataload, as a u256.
+    */
+  function Selector(s: Executing): u256
     requires CallDataSize(s) >= 4
   {
     shift_right_224_unsigned(CallDataLoad(0, s))
   }
 
-  method Main(s: Executing) returns (s': State)
+  /**
+    *   Dispatch and execute code.
+    *   @param  s   A Yul state.
+    *   @returns    The state reached after executing the call 
+    *               given byt the calldataload.
+    */
+  method Dispatch(s: Executing) returns (s': State)
+    /** Calldataload cannot be two large. */
     requires TWO_255 - 1 > CallDataSize(s) as nat
 
+    /** The returned state is either an RETURN or an ERROR. */
     ensures s'.RETURNS? || s'.ERROR?
+    /** If not enough calldata, revert. */
     ensures CallDataSize(s) < 4 ==> s'.ERROR? 
 
     /** Accounts are not modified. */
@@ -87,6 +104,7 @@ module ERC20 {
         return Revert(0, 0, s1);
 
     }
+    //  Here we should revert as the calldataload does not have enough bytes.
     assert CallDataSize(s1) < 4;
     return Revert(0, 0, s1);
   }
@@ -102,6 +120,7 @@ module ERC20 {
     ensures s'.EXECUTING?
     ensures s'.yul.context == s.yul.context
     ensures s'.yul.world == s.yul.world
+    ensures s.MemSize() >= 96 ==> memPtr == s.Read(64)
   {
     return MLoad(64, s).0, MLoad(64, s).1;
   }
@@ -130,16 +149,25 @@ module ERC20 {
     return s;
   }
 
+  /**
+    * Shift right.
+    */
   function shift_right_unsigned_dynamic(bits: u256, value: u256): (newValue: u256)
   {
     Shr(value, bits)
   }
 
+  /**
+    *  In this context cleanup is the identity.
+    */
   function cleanup_from_storage_t_uint256(value: u256): (cleaned: u256)
   {
     value
   }
 
+  /**
+    *   ??
+    */
   function extract_from_storage_value_dynamict_uint256(slot_value: u256, offset: u256) : (value: u256)
     requires offset as nat * 8 < TWO_256
   {
@@ -147,6 +175,9 @@ module ERC20 {
     cleanup_from_storage_t_uint256(k)
   }
 
+  /**
+    *   ??
+    */
   function read_from_storage_split_dynamic_t_uint256(slot: u256, offset: u256, s: Executing): (value: u256)
     requires offset as nat * 8 < TWO_256
     ensures offset == 0 ==> value == s.SLoad(slot)
@@ -154,7 +185,9 @@ module ERC20 {
     extract_from_storage_value_dynamict_uint256(SLoad(slot, s), offset)
   }
 
-
+  /**
+    *    The auto-generated getter for totoalSupply.
+    */
   method getter_fun_totalSupply_3(s: Executing) returns (ret: u256)
     ensures ret == s.SLoad(0)
   {
@@ -163,14 +196,16 @@ module ERC20 {
     ret := read_from_storage_split_dynamic_t_uint256(slot, offset, s);
   }
 
-
+  /**
+    *  Another identity function,
+    */
   function cleanup_t_uint256(value: u256): (cleaned: u256)
   {
     value
   }
 
   /**
-    *  Store value at address pos in Memory.
+    *  Store value at address `pos` in Memory.
     */
   method abi_encode_t_uint256_to_t_uint256_fromStack(value: u256, pos: u256, s: Executing) returns (s': State)
     ensures s'.EXECUTING?
@@ -217,7 +252,6 @@ module ERC20 {
       var s1 := revert_error_ca66f745a3ce8ff40e2ccaf1ad45db7774001b90d25810abd9040049be7bf4bb(s);
       return s1;
     }
-    // else {
     assert CallValue(s) == 0;
     var s1 := abi_decode_tuple_(4, CallDataSize(s), s);
     var ret_0 :=  getter_fun_totalSupply_3(s1);
@@ -249,6 +283,7 @@ module ERC20 {
     ensures s' == s
   {
     if !Eq(value, cleanup_t_uint256(value)) then
+      // this test is never true.
       assert false;
       Revert(0, 0, s)
     else s
@@ -289,6 +324,9 @@ module ERC20 {
     Add(headStart, 0)
   }
 
+  /**
+    *  Increase totalSupply by a given amount if possible.
+    */
   method external_fun_mint_13(s: Executing) returns (s': State)
     requires 4 <= CallDataSize(s) as nat < TWO_255 - 1
     ensures CallDataSize(s) < 36 ==> s'.ERROR?
@@ -301,7 +339,7 @@ module ERC20 {
     // ensures s'.EXECUTING? ==> s'.Load(0) == s.SLoad(0) +  ByteUtils.ReadUint256(s.yul.context.callData, 4)
   {
     if CallValue(s) > 0 {
-      //  Not payable
+      //  Not payable, revert
       s' := revert_error_ca66f745a3ce8ff40e2ccaf1ad45db7774001b90d25810abd9040049be7bf4bb(s);
       return;
     }
@@ -324,6 +362,7 @@ module ERC20 {
 
       assert memPos == memEnd;
       s' := Return(memPos, memEnd - memPos, s3);
+      //    The data returned is empty.
       assert |s'.data| == 0;
       return;
     }
@@ -382,11 +421,12 @@ module ERC20 {
     NSCOverFlowU256(x1, sum);
     s' := s;
     if Gt(x1, sum) {
+      //  Overflow, revert
       assert x as nat + y as nat >= TWO_256;
       return 0, panic_error_0x11(s);
     }
+    //  no overflow 
     assert x as nat + y as nat < TWO_256;
-    assert s'.EXECUTING?;
   }
 
   function {:opaque} shift_left_0(value: u256): (newValue: u256)
@@ -442,10 +482,10 @@ module ERC20 {
     ensures s'.EXECUTING? ==> s'.yul.world.accounts.Keys == s.yul.world.accounts.Keys
     ensures s'.ERROR? || s'.EXECUTING?
   {
-/// @src 0:1314:1320  "amount"
+    /// @src 0:1314:1320  "amount"
     var v_1 := var_amount_5;
     var expr_9 := v_1;
-/// @src 0:1299:1320  "totalSupply += amount"
+    /// @src 0:1299:1320  "totalSupply += amount"
     var v_2 := read_from_storage_split_offset_0_t_uint256(0x00, s);
     assert v_2 == s.SLoad(0x00);
     var expr_10, s1 := checked_add_t_uint256(v_2, expr_9, s);
