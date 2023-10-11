@@ -142,5 +142,5 @@ method Main2(s: Executing, x: u256, y: u256) returns (s': State)
     return Return(0x40, 32, s2);       //  return result
 }
 ```
-And this is true **for all inputs `s`, `x`, `y`,**.
+And this is true **for all inputs `s`, `x`, `y`**.
 
