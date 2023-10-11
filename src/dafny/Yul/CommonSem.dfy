@@ -258,7 +258,7 @@ module CommonSem {
     */
   function SLoad(loc: u256, s: Executing): u256
   {
-    s.Load(loc)
+    s.SLoad(loc)
   }
 
   /**
@@ -266,7 +266,7 @@ module CommonSem {
     */
   function SStore(loc: u256, val: u256, s: Executing): (s': State)
   {
-    s.Store(loc, val)
+    s.SStore(loc, val)
   }
 
   // Environment (context) functions
