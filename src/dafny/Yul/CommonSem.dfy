@@ -39,8 +39,8 @@ module CommonSem {
   /**
     *    @link{https://osec.io/blog/2023-07-28-solidity-compilers-memory-safety}
     *    Semantics seems to be important only for optimisation.
-   8    For now we use Identyt for memoryguard.
-   */
+    *    For now we use Identyt for memoryguard.
+    */
   function MemoryGuard(x: u256): u256 {
     x
   }
@@ -159,7 +159,6 @@ module CommonSem {
   {
   }
 
-
   /**
     *   Bitwise Or
     *   @param      x    
@@ -205,7 +204,6 @@ module CommonSem {
   {
     //  get len bytes from loc and possibly extend memory
     var bytes := Memory.Slice(s.yul.memory, loc as nat, len as nat);
-    // var m' := Memory.ExpandMem(s.yul.memory, loc as nat, len as nat);
     var hash := s.yul.precompiled.Sha3(bytes);
     hash
   }
