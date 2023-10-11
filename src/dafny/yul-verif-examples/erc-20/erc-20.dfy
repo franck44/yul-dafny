@@ -311,7 +311,6 @@ module ERC20 {
     }
     {
       var offset := 0;
-      assume headStart < dataEnd <= CallDataSize(s);
       value0, s' := abi_decode_t_uint256(Add(headStart, offset), dataEnd, s);
       assert value0 == s.yul.context.CallDataRead(headStart) == ByteUtils.ReadUint256(s.yul.context.callData, headStart as nat);
     }
