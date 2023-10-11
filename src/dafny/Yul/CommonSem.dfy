@@ -150,10 +150,13 @@ module CommonSem {
     ((x as bv256) & (y as bv256)) as u256
   }
 
-  lemma foo211(x: u256, y: u256)
+  /**
+    *   Special cases of And at boundaries.
+    */
+  lemma XAnd1IsX(x: u256, y: u256)
     requires y == 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-    ensures And(x, y) == x
-  {    
+    ensures And(x, y) == And(y, x) == x
+  {
   }
 
 
