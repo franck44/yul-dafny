@@ -17,8 +17,10 @@ object "Runtime" {
     let x := 8
     let y := 3
     let z := max(x, y)
-    // Store z at memory location 0x40
+    //  Store z at memory location 0x40
     mstore(0x40, z)
+    //  Return the previously stored value
+    return(0x40, 32)
   }
 }
 ```
@@ -48,65 +50,97 @@ function MStore(address: u256, value: u256, s: Executing): (s': State)
   }
 ```
 
-The Dafny `Executing` captures states that are not _error_ states (e.g. revert states). 
+The Dafny datatype `Executing` captures states that are not _error_ states (e.g. revert states). 
 This Dafny function can only be used with a non-error state as an input.
 However it returns a `State` which can be either `Executing` or `Error`.
 
-An executing state contains the current `memory` state (an 32-byte addressable array of bytes), `storage` state (a 32-byte addressable array of 32-bytes), and some context information for the current execution (e.g. the `calldataload`). 
+An executing state comprises of:
 
-The semantics has the following effects:
+-  the current `memory` state, an 32-byte addressable array of bytes), 
+- the `storage` state, a 32-byte addressable array of 32-bytes, and 
+- some contextual information for the current execution (e.g. the `calldataload`). 
+
+The semantics of `MStore` has the following effects:
 
 1. extend the memory to ensure the size is larger than the requested address to store from;
 2. update the memory of state `s` by writing the 32-byte (u256) `value` at address `address` in memory.
 
-As can be readily seen, the semantics of this function guarantees several post-conditions:
+As can be readily seen, the semantics of this function guarantees several post-conditions (`ensures`):
 
 1. the returned state is always `Executing`;
 2. the memory size of the returned state goes beyond the 32 bytes after `address`;
-3. the other components of the state (world, context, are not modified.
+3. the other components of the state (world, context, etc) are not modified.
 
 The Dafny verification engine checks that the post-conditions hold **for all inputs**.
-Of course to do it uses the definitions of some functions `Memory.ExpandMem` and `Memory.WriteUint256` that are provided the Dafny-EVM library (a separate repository).
+Of course to do it uses the definitions and (proved) properties of some functions `Memory.ExpandMem` and `Memory.WriteUint256` that are provided the Dafny-EVM library (a separate repository).
 
-The final Dafny code is:
+The full Dafny code is:
 
 ```dafny
+
 /**
- *  Translation of the of the Yul code of max in Dafny.
+ *   A ghost (verification-only) function tha provides a definition of `maximum`.
  */
-  method Max(x: u256, y: u256, s: Executing) returns (result: u256, s': State) 
-    ensures result == x || result == y
-    ensures result >= x && result >= y
-    ensures s' == s     
-  {
-    s' := s;
+ghost function maxu256(x: u256, y: u256): (r: u256)
+    ensures r == x || r == y
+    ensures r >= x && r >= y
+{
+    if x <= y then y else x
+}
+
+/**
+ *  Translation of the Yul code of max in Dafny.
+ */
+method Max(x: u256, y: u256) returns (result: u256) 
+    ensures result == maxu256(x, y)
+{
     result := x;
     if Lt(x, y) { 
-      result := y;
+        result := y;
     }
-  }
+}
 
 /**
  *  Translation of Yul code of main in Dafny.
  */
 method Main(s: Executing) returns (s': State)  
-    requires s.MemSize() == 0
-    ensures s'.EXECUTING?
-    ensures s'.MemSize() > 0x40 + 31
+    ensures s'.RETURNS?
+    ensures ByteUtils.ReadUint256(s'.data, 0) == 8
 {
     var x := 8;                     //  let
     var y := 3;                     //  let
-    var z, s1 := Max(x, y, s);      //  funcall. Returns result ans new memory (in s1).
-    s' := MStore(0x40, z, s1);      //  memory store
+    var z := Max(x, y);             //  funcall
+    var s1:= MStore(0x40, z, s);    //  memory store
+    return Return(0x40, 32, s1);    //  return result
 }
 ```
 
 Thanks to this encoding we can reason about the code and prove some properties of `Main` (the top-level function of the Yul code):
 
-1. the resulting Yul state is always `Executing`, no error/exception occurs;
-2. the memory size of the resulting state `s` is larger than 31 bytes after the memory slot we store the computed value.
+1. the resulting Yul state is always `Return`, no error/exception occurs;
+2. the result returned in the returned state's data field is 8.
 
-And this is true **for all input state `s`** with an initial empty memory (memory size is zero).
+And this is true **for all input state `s`**.
 
 The code for `Max` also provides a proof that it computes the maximum of `x` and `y`: the result is larger than both `x` and `y` and it is either `x` or `y`. 
+
+An easy generalisation is that the same code works with arbitrary inputs for `x` and `y`
+
+```dafny
+/**
+ *  Generalisation of Yul code of main in Dafny.
+ *  @param      x 
+ *  @param      y 
+ *  @returns    The max of `x` and `y` as defined by `maxu256`.
+ */
+method Main2(s: Executing, x: u256, y: u256) returns (s': State)
+    ensures s'.RETURNS?
+    ensures ByteUtils.ReadUint256(s'.data, 0) == maxu256(x, y)
+{
+    var z := Max(x, y);                //  funcall
+    var s2 := MStore(0x40, z, s);      //  memory store
+    return Return(0x40, 32, s2);       //  return result
+}
+```
+And this is true **for all inputs `s`, `x`, `y`,**.
 

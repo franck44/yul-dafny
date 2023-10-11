@@ -28,14 +28,12 @@ module maxYul {
   /**
     *  Translation of the of the Yul code of max in Dafny.
     */
-  method Max(x: u256, y: u256, s: Executing) returns (result: u256, s': State) 
-    ensures result == x || result == y
-    ensures result >= x && result >= y
-    ensures s' == s     
+  method Max(x: u256, y: u256) returns (result: u256)
+    ensures result == maxu256(x, y)
   {
-    s' := s;
+    // s' := s;
     result := x;
-    if Lt(x, y) { 
+    if Lt(x, y) {
       result := y;
     }
   }
@@ -43,22 +41,43 @@ module maxYul {
   /**
     *  Translation of Yul code of main in Dafny.
     */
-  method Main(s: Executing) returns (s': State)  
-    requires s.MemSize() % 32 == 0
+  method Main(s: Executing) returns (s': State)
     ensures s'.RETURNS?
     ensures ByteUtils.ReadUint256(s'.data, 0) == 8
   {
     var x := 8;                     //  let
     var y := 3;                     //  let
-    var z, s1 := Max(x, y, s);      //  funcall. Returns result ans new memory.
-    var s2 := MStore(0x40, z, s1);  //  memory store
+    var z := Max(x, y);      //  funcall. Returns result ans new memory.
+    var s2 := MStore(0x40, z, s);  //  memory store
+    return Return(0x40, 32, s2);    //  return result
+  }
+
+  /**
+    *   A ghost (verification-only) function.
+    */
+  ghost function maxu256(x: u256, y: u256): (r: u256)
+    ensures r == x || r == y
+    ensures r >= x && r >= y
+  {
+    if x <= y then y else x
+  }
+
+  /**
+    *  Generalisation of Yul code of main in Dafny.
+    */
+  method Main2(s: Executing, x: u256, y: u256) returns (s': State)
+    ensures s'.RETURNS?
+    ensures ByteUtils.ReadUint256(s'.data, 0) == maxu256(x, y)
+  {
+    var z := Max(x, y);      //  funcall. Returns result ans new memory.
+    var s2 := MStore(0x40, z, s);  //  memory store
     return Return(0x40, 32, s2);    //  return result
   }
 
   /**
     *  Run the code. 
     */
-  method {:main} {:verify true} Test()  
+  method {:main} {:verify true} Test()
   {
     var s := Main(YulState.Init());
     assert s.RETURNS?;
