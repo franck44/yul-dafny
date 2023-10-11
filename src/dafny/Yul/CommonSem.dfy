@@ -317,4 +317,15 @@ module CommonSem {
     ERROR(REVERTS, data:=data)
   }
 
+  /**
+    *    Return.
+    *    @param  start   Offset of memory slice to be returned.
+    *    @param  len     Number of bytes from `start` to be returned.
+    */
+  function Return(start: u256, len: u256, s: Executing): (s': State)
+    ensures s'.RETURNS?
+  {
+    var data := Memory.Slice(s.yul.memory, start as nat, len as nat);
+    RETURNS(data := data, world := s.yul.world)
+  }
 }

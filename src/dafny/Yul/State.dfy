@@ -16,6 +16,7 @@ include "../../../libs/evm-dafny/src/dafny/util/int.dfy"
 include "../../../libs/evm-dafny/src/dafny/util/arrays.dfy"
 include "../../../libs/evm-dafny/src/dafny/core/memory.dfy"
 include "../../../libs/evm-dafny/src/dafny/core/context.dfy"
+include "../../../libs/evm-dafny/src/dafny/core/storage.dfy"
 include "../../../libs/evm-dafny/src/dafny/core/precompiled.dfy"
 include "../../../libs/evm-dafny/src/dafny/core/worldstate.dfy"
 
@@ -28,6 +29,7 @@ module YulState {
   import opened Arrays
   import Memory
   import Context
+  import Storage
   import WorldState
   import Precompiled
 
@@ -66,8 +68,8 @@ module YulState {
     */
   datatype State =
       EXECUTING(yul: T)
-    | ERROR(error: Error, data: Array<u8> := [])
-    | RETURNS(data: Array<u8> := [] )
+    | ERROR(error: Error, data: Array<u8> := []) 
+    | RETURNS(data: Array<u8> := [], world: WorldState.T)
 
   {
     //  Memory helpers.
