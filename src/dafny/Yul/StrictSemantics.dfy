@@ -19,13 +19,15 @@ include "../../../libs/evm-dafny/src/dafny/bytecode.dfy"
 include "./Semantics.dfy"
 include "State.dfy"
 include "./CommonSem.dfy"
+
 /**
   * Provide Semantics of Yul builtin operators/functions.
   * This semantics uses Dafny native arithmetic operators when possible
   * enforcing types (u256).
   *
   * As we use Dafny native operators, it is easier for the solver
-  * to "reason" about them.
+  * to "reason" about them. It also imposes that proofs of 
+  * non-overflow/underflow be given by the caller.
   *
   * EVM dialect.
   * @link{https://docs.soliditylang.org/en/latest/yul.html#evm-dialect}
