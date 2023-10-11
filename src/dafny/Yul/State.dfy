@@ -47,6 +47,11 @@ module YulState {
     precompiled: Precompiled.T
   )
 
+  /**
+    *   The type for valid states requires that the address
+    *   provided in the context is in the Keys of the worldstate 
+    *   addresses. This is similar to the Dafny-EVM requirement.
+    */
   type T = s: Raw | s.context.address in s.world.accounts
     witness YUL_WITNESS
 
@@ -68,7 +73,7 @@ module YulState {
     */
   datatype State =
       EXECUTING(yul: T)
-    | ERROR(error: Error, data: Array<u8> := []) 
+    | ERROR(error: Error, data: Array<u8> := [])
     | RETURNS(data: Array<u8> := [], world: WorldState.T)
 
   {
@@ -88,19 +93,18 @@ module YulState {
       *
       *  @param  address The first byte to read from.
       */
-    function Read(address:nat) : u256
+    function Read(address: nat) : u256
       requires this.EXECUTING?
       requires address + 31 < this.MemSize() {
       Memory.ReadUint256(yul.memory, address)
     }
-
 
     //  Storage helpers.
 
     /**
       * Read word from storage
       */
-    function Load(address:u256) : u256
+    function SLoad(address: u256) : u256
       requires this.EXECUTING?
     {
       var account := yul.context.address;
@@ -110,7 +114,7 @@ module YulState {
     /**
       * Store word in storage
       */
-    function Store(address:u256, val: u256): State
+    function SStore(address: u256, val: u256): State
       requires this.EXECUTING?
     {
       var account := yul.context.address;
@@ -136,6 +140,9 @@ module YulState {
   type Executing = s:State | s.EXECUTING?
     witness EXECUTING(YUL_WITNESS)
 
+  /**
+    * Returns a default executing state.
+    */
   function Init(): Executing {
     EXECUTING(YUL_WITNESS)
   }
@@ -145,11 +152,5 @@ module YulState {
     */
   type TerminatedState = s:State | (s.RETURNS? || s.ERROR?)
     witness ERROR(INSUFFICIENT_FUNDS)
-
-
-
-  // | ERROR(error:Error,gas:nat := 0, data: Array<u8> := [])
-  // | RETURNS(gas:nat,data: Array<u8>,world: WorldState.T,substate:SubState.T)
-  // | CONTINUING(Continuation) {
 
 }
