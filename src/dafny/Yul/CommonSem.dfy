@@ -171,21 +171,19 @@ module CommonSem {
   /**
     * Right shift operation.
     */
-  function Shr(shift: u256, value: u256): u256
-    ensures shift == 0 ==> Shr(shift, value) == value
+  function Shr(value: u256, shift: u256): u256
+    ensures shift == 0 ==> Shr(value, shift) == value
   {
-    assume U256.Shr(0, value) == value;
-    U256.Shr(shift, value)
+    U256.Shr(value, shift)
   }
 
   /**
     * Left shift operation.
     */
-  function Shl(shift: u256, value: u256): u256
-    ensures shift == 0 ==> Shl(shift, value) == value
+  function Shl(value: u256, shift: u256): u256
+    ensures shift == 0 ==> Shl(value, shift) == value
   {
-    assume U256.Shl(0, value) == value;
-    U256.Shl(shift, value)
+    U256.Shl(value, shift)
   }
 
   /**
