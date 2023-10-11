@@ -227,7 +227,7 @@ module CommonSem {
   {
     //  Make sure memory is large enough.
     var m' := Memory.ExpandMem(s.yul.memory, address as nat, 32);
-    (Memory.ReadUint256(m', address as nat) ,EXECUTING(s.yul.(memory := m')))
+    (Memory.ReadUint256(m', address as nat), EXECUTING(s.yul.(memory := m')))
   }
 
   /**
