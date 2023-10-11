@@ -57,18 +57,26 @@ module ERC20 {
     /** The returned state is either an RETURN or an ERROR. */
     ensures s'.RETURNS? || s'.ERROR?
     /** If not enough calldata, revert. */
-    ensures CallDataSize(s) < 4 ==> s'.ERROR? 
+    ensures CallDataSize(s) < 4 ==> s'.ERROR?
 
-    /** Accounts are not modified. */
-    ensures s'.RETURNS? ==> s.yul.world.accounts == s'.world.accounts
-    ensures s'.RETURNS? ==> CallDataSize(s) as nat >= 4
+    /** Accounts' keys are not modified. */
+    ensures s'.RETURNS? ==> s.yul.world.accounts.Keys == s'.world.accounts.Keys
 
-    ensures CallDataSize(s) as nat >= 4 && Selector(s) == TotalSupplySelector && CallValue(s) == 0 ==> s'.RETURNS?
-    // ensures CallDataSize(s) >= 36 && Selector(s) == MintSelector && (s.Load(0) as nat + ByteUtils.ReadUint256(s.yul.context.callData, 4) as nat) < TWO_256 ==> s'.RETURNS?
-    ensures s'.RETURNS? && Selector(s) == TotalSupplySelector ==> Storage.Read(s'.world.accounts[s.yul.context.address].storage, 0) ==  s.SLoad(0)
+    /** Conditions under which calls do not revert. */
+    ensures (CallDataSize(s) >= 4 && Selector(s) == TotalSupplySelector && CallValue(s) == 0) ==> s'.RETURNS?
+    ensures CallDataSize(s) >= 36 && Selector(s) == MintSelector && CallValue(s) == 0 && (s.SLoad(0) as nat + CallDataLoad(4, s) as nat) < TWO_256 ==> s'.RETURNS?
+
+    ensures CallDataSize(s) >= 36 && Selector(s) == MintSelector && CallValue(s) == 0 && (s.SLoad(0) as nat + CallDataLoad(4, s) as nat) < TWO_256 ==> s'.RETURNS?
+
+    /**  Worldstate is not modified by totalSupply. */
+    ensures s'.RETURNS? && Selector(s) == TotalSupplySelector ==> s'.world ==  s.yul.world
+    // /** The value returned  in the data field is storage at slot 0 in `s`. */
     ensures s'.RETURNS? && Selector(s) == TotalSupplySelector ==> s'.RETURNS? ==> ByteUtils.ReadUint256(s'.data, 0) == s.SLoad(0)
-    // ensures s'.RETURNS? && Selector(s) == MintSelector ==> Storage.Read(s'.world.accounts[account].storage, 0) ==  s.SLoad(0) + ByteUtils.ReadUint256(s.yul.context.callData, 4)
-    // ensures (CallDataSize(s) < 4 || (Selector(s) !=  TotalSupplySelector && Selector(s) != MintSelector)) ==> s'.ERROR?
+
+    /** Storage is updated by mint if no overflow. */
+    ensures s'.RETURNS? && Selector(s) == MintSelector ==> Storage.Read(s'.world.accounts[s.yul.context.address].storage, 0) as nat ==  s.SLoad(0) as nat + CallDataLoad(4, s) as nat < TWO_256
+    //  Overflow result in a revert.
+    ensures CallDataSize(s) >= 36 && Selector(s) == MintSelector && CallValue(s) == 0 && (s.SLoad(0) as nat + CallDataLoad(4, s) as nat) >= TWO_256 ==> s'.ERROR?
   {
 
     // var s1 := MStore(64, MemoryGuard(128), s);
@@ -241,15 +249,12 @@ module ERC20 {
 
   method external_fun_totalSupply_3(s: Executing) returns (s': State)
     requires 4 <= CallDataSize(s) as nat < TWO_255 - 1
-
+    requires s.MemSize() >= 96 && s.Read(64) as nat + 32 < TWO_256
     ensures CallValue(s) > 0 <==> s'.ERROR?
     ensures s'.ERROR? || s'.RETURNS?
     ensures s'.RETURNS? ==> |s'.data| == 32
     ensures s'.RETURNS? ==> ByteUtils.ReadUint256(s'.data, 0) == s.SLoad(0)
-    ensures s'.RETURNS? ==> s.yul.world.accounts == s'.world.accounts
-    ensures s'.RETURNS? ==> Storage.Read(s'.world.accounts[s.yul.context.address].storage, 0) == s.SLoad(0)
-    // Storage.Read(s'.world.accounts[s.yul.context.address].storage, 0) ==  s.SLoad(0);
-    // ensures
+    ensures s'.RETURNS? ==> s'.world == s.yul.world
   {
     if CallValue(s) > 0 {
       //  Not payable
@@ -303,6 +308,7 @@ module ERC20 {
 
   method abi_decode_tuple_t_uint256(headStart: u256, dataEnd: u256, s: Executing) returns (value0: u256, s': State)
     requires -TWO_255 <= dataEnd as int - headStart as int < TWO_255
+    requires headStart <= dataEnd <= CallDataSize(s)
     ensures dataEnd as int - headStart as int >= 32 ==> s'.EXECUTING?
     ensures dataEnd as int - headStart as int < 32 ==> s'.ERROR?
     ensures s'.EXECUTING? ==> s' == s
@@ -332,14 +338,12 @@ module ERC20 {
     */
   method external_fun_mint_13(s: Executing) returns (s': State)
     requires 4 <= CallDataSize(s) as nat < TWO_255 - 1
-    ensures CallDataSize(s) < 36 ==> s'.ERROR?
+    ensures CallDataSize(s) < 36 || CallValue(s) > 0 ==> s'.ERROR?
     ensures CallDataSize(s) >= 36 && (s.SLoad(0) as nat + ByteUtils.ReadUint256(s.yul.context.callData, 4) as nat) >= TWO_256 ==> s'.ERROR?
+    ensures CallDataSize(s) >= 36 && CallValue(s) == 0 && (s.SLoad(0) as nat + ByteUtils.ReadUint256(s.yul.context.callData, 4) as nat) < TWO_256 ==> s'.RETURNS?
     ensures s'.RETURNS? || s'.ERROR?
     ensures s'.RETURNS? ==> s'.world.accounts.Keys == s.yul.world.accounts.Keys
-    ensures  s'.RETURNS? ==> Storage.Read(s'.world.accounts[s.yul.context.address].storage, 0) ==  s.SLoad(0) + ByteUtils.ReadUint256(s.yul.context.callData, 4)
-    // ensures s'.EXECUTING? ==> CallDataSize(s) >= 36
-    // ensures s'.EXECUTING? ==> (s.SLoad(0) as nat + ByteUtils.ReadUint256(s.yul.context.callData, 4) as nat) < TWO_256
-    // ensures s'.EXECUTING? ==> s'.Load(0) == s.SLoad(0) +  ByteUtils.ReadUint256(s.yul.context.callData, 4)
+    ensures s'.RETURNS? ==> Storage.Read(s'.world.accounts[s.yul.context.address].storage, 0) ==  s.SLoad(0) + CallDataLoad(4, s)
   {
     if CallValue(s) > 0 {
       //  Not payable, revert
@@ -415,8 +419,7 @@ module ERC20 {
     ensures x as nat + y as nat < TWO_256 <==> s'.EXECUTING?
     ensures x as nat + y as nat >= TWO_256 <==> s'.ERROR?
     ensures x as nat + y as nat < TWO_256 <==> sum as nat == x as nat + y as nat
-    ensures s'.EXECUTING? ==> s'.MemSize() == s.MemSize()
-    ensures s'.EXECUTING? ==> s'.yul.world.accounts.Keys == s.yul.world.accounts.Keys
+    ensures s'.EXECUTING? ==> s' ==  s
   {
     var x1 := cleanup_t_uint256(x);
     var y1 := cleanup_t_uint256(y);
@@ -483,6 +486,7 @@ module ERC20 {
     ensures s'.EXECUTING? <==> s.SLoad(0) as nat + var_amount_5 as nat < TWO_256
     ensures s'.EXECUTING? ==> s'.SLoad(0) == s.SLoad(0) + var_amount_5
     ensures s'.EXECUTING? ==> s'.yul.world.accounts.Keys == s.yul.world.accounts.Keys
+    ensures s'.EXECUTING? ==> s'.yul.context == s.yul.context
     ensures s'.ERROR? || s'.EXECUTING?
   {
     /// @src 0:1314:1320  "amount"
