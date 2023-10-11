@@ -76,8 +76,6 @@ module ERC20 {
       case MintSelector =>
         {
           // mint(uint256)
-          // //   assert false;
-          //     assume CallDataSize(s1) as nat < TWO_255 - 1;
           s':= external_fun_mint_13(s1);
           assert s'.RETURNS? ==> Storage.Read(s'.world.accounts[s.yul.context.address].storage, 0) ==  s.SLoad(0) + ByteUtils.ReadUint256(s.yul.context.callData, 4);
           //   return;
@@ -223,10 +221,7 @@ module ERC20 {
     assert CallValue(s) == 0;
     var s1 := abi_decode_tuple_(4, CallDataSize(s), s);
     var ret_0 :=  getter_fun_totalSupply_3(s1);
-    assert ret_0 == s1.SLoad(0) == s.SLoad(0);
     var memPos, s2 := allocate_unbounded(s1);
-    assume memPos as nat + 32 < TWO_256;
-    //  Store ret_0 in memory at location memPos'
     var memEnd, s3 := abi_encode_tuple_t_uint256__to_t_uint256__fromStack(memPos , ret_0, s2);
     assert Memory.ReadUint256(s3.yul.memory, memPos as nat) == ret_0;
     // var x := RETURNS(data := Memory.Slice(s3.yul.memory, memPos as nat, (memEnd - memPos) as nat));
@@ -314,8 +309,6 @@ module ERC20 {
     if s1.ERROR? {
       s' := s1;
     } else {
-      assert CallDataSize(s) - 4 >= 32;
-      assert param_0 == ByteUtils.ReadUint256(s.yul.context.callData, 4);
       var s2 := fun_mint_13(param_0, s1);
       if !s2.EXECUTING? {
         //  Overflow
@@ -328,29 +321,10 @@ module ERC20 {
       assert s2.SLoad(0) == s.SLoad(0) + param_0;
       var memPos, s3 := allocate_unbounded(s2);
       var memEnd := abi_encode_tuple__to__fromStack(memPos);
-            assert s.yul.world.accounts.Keys == s3.yul.world.accounts.Keys;
 
-      assert (s.SLoad(0) as nat + ByteUtils.ReadUint256(s.yul.context.callData, 4) as nat) < TWO_256;
-      assert s3.SLoad(0) as nat == (s.SLoad(0) as nat + ByteUtils.ReadUint256(s.yul.context.callData, 4) as nat);
-      // s' := RETURNS(data := Memory.Slice(s3.yul.memory, memPos as nat, (memEnd - memPos) as nat));
       assert memPos == memEnd;
       s' := Return(memPos, memEnd - memPos, s3);
       assert |s'.data| == 0;
-      //   assume memPos == 0;
-      assume s.yul.context.address in s'.world.accounts;
-      assume s.yul.context.address in s3.yul.world.accounts;
-      assume s.yul.world.accounts.Keys == s'.world.accounts.Keys;
-
-      assert Storage.Read(s'.world.accounts[s.yul.context.address].storage, 0) ==  Storage.Read(s3.yul.world.accounts[s.yul.context.address].storage, 0);
-
-      assume s3.yul.context.address == s.yul.context.address;
-      assert s3.SLoad(0) == Storage.Read(s3.yul.world.accounts[s.yul.context.address].storage, 0);
-      assert Storage.Read(s3.yul.world.accounts[s.yul.context.address].storage, 0) as nat ==
-             (s.SLoad(0) as nat + ByteUtils.ReadUint256(s.yul.context.callData, 4) as nat);
-
-      assert s3.yul.world == s'.world;
-
-      assert Storage.Read(s'.world.accounts[s.yul.context.address].storage, 0) ==  s.SLoad(0) + ByteUtils.ReadUint256(s.yul.context.callData, 4);
       return;
     }
   }
@@ -459,9 +433,6 @@ module ERC20 {
     ensures s'.MemSize() == s.MemSize()
   {
     var convertedValue_0 := convert_t_uint256_to_t_uint256(value_0);
-    assert convertedValue_0 == value_0;
-    var k := update_byte_slice_32_shift_0(SLoad(slot, s), prepare_store_t_uint256(convertedValue_0));
-    assert k == convertedValue_0;
     SStore(slot, update_byte_slice_32_shift_0(SLoad(slot, s), prepare_store_t_uint256(convertedValue_0)), s)
   }
 
