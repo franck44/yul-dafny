@@ -203,7 +203,7 @@ module CommonSem {
     requires loc as nat + len as nat < s.MemSize()
   {
     //  get len bytes from loc and possibly extend memory
-    var bytes := Memory.Slice(s.yul.memory, loc as nat, len as nat);
+    var bytes := Memory.Slice(s.GetMem(), loc as nat, len as nat);
     var hash := s.yul.precompiled.Sha3(bytes);
     hash
   }
@@ -222,11 +222,11 @@ module CommonSem {
   function MLoad(address: u256, s: Executing): (s': (u256, State))
     ensures s'.1.EXECUTING?
     ensures s'.1.MemSize() > address as nat + 31
-    ensures s'.1.yul.context == s.yul.context
-    ensures s'.1.yul.world == s.yul.world
+    ensures s'.1.Context() == s.Context()
+    ensures s'.1.World() == s.World()
   {
     //  Make sure memory is large enough.
-    var m' := Memory.ExpandMem(s.yul.memory, address as nat, 32);
+    var m' := Memory.ExpandMem(s.GetMem(), address as nat, 32);
     (Memory.ReadUint256(m', address as nat), EXECUTING(s.yul.(memory := m')))
   }
 
@@ -245,11 +245,11 @@ module CommonSem {
   function MStore(address: u256, value: u256, s: Executing): (s': State)
     ensures s'.EXECUTING?
     ensures s'.MemSize() > address as nat + 31
-    ensures s'.yul.context == s.yul.context
-    ensures s'.yul.world == s.yul.world
+    ensures s'.Context() == s.Context()
+    ensures s'.World() == s.World()
   {
     //  Make sure memory is large enough.
-    var m' := Memory.ExpandMem(s.yul.memory, address as nat, 32);
+    var m' := Memory.ExpandMem(s.GetMem(), address as nat, 32);
     EXECUTING(s.yul.(memory := Memory.WriteUint256(m', address as nat, value)))
   }
 
@@ -276,7 +276,7 @@ module CommonSem {
     */
   function CallValue(s: Executing): u256
   {
-    s.yul.context.callValue
+    s.Context().callValue
   }
 
   /**
@@ -289,7 +289,7 @@ module CommonSem {
   function CallDataLoad(loc: u256, s: Executing): u256
   {
     if loc >= CallDataSize(s) then 0
-    else s.yul.context.CallDataRead(loc)
+    else s.Context().CallDataRead(loc)
   }
 
   /**
@@ -297,7 +297,7 @@ module CommonSem {
     */
   function CallDataSize(s: Executing): u256
   {
-    s.yul.context.CallDataSize()
+    s.Context().CallDataSize()
   }
 
   /**
@@ -308,7 +308,7 @@ module CommonSem {
   function Revert(start: u256, len: u256, s: Executing): (s': State)
     ensures s'.ERROR?
   {
-    var data := Memory.Slice(s.yul.memory, start as nat, len as nat);
+    var data := Memory.Slice(s.GetMem(), start as nat, len as nat);
     ERROR(REVERTS, data:=data)
   }
 
@@ -320,7 +320,7 @@ module CommonSem {
   function Return(start: u256, len: u256, s: Executing): (s': State)
     ensures s'.RETURNS?
   {
-    var data := Memory.Slice(s.yul.memory, start as nat, len as nat);
-    RETURNS(data := data, world := s.yul.world)
+    var data := Memory.Slice(s.GetMem(), start as nat, len as nat);
+    RETURNS(data := data, world := s.World())
   }
 }

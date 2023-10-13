@@ -90,6 +90,15 @@ module YulState {
     }
 
     /**
+      *  Get Accounts.
+      */
+    function Accounts(): map<u160,WorldState.Account>
+      requires this.EXECUTING? || this.RETURNS?
+    {
+        this.World().accounts
+    }
+
+    /**
       *  Get context.
       */
     function Context(): Context.T

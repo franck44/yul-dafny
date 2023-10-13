@@ -118,8 +118,8 @@ module ERC20 {
   /** Get the free memory pointer. */
   method allocate_unbounded(s: Executing) returns (memPtr: u256, s': State)
     ensures s'.EXECUTING?
-    ensures s'.yul.context == s.yul.context
-    ensures s'.yul.world == s.yul.world
+    ensures s'.Context() == s.Context()
+    ensures s'.World() == s.World()
     ensures s.MemSize() >= 96 ==> memPtr == s.Read(64)
   {
     return MLoad(64, s).0, MLoad(64, s).1;
@@ -216,8 +216,8 @@ module ERC20 {
   method abi_encode_t_uint256_to_t_uint256_fromStack(value: u256, pos: u256, s: Executing) returns (s': State)
     ensures s'.EXECUTING?
     ensures s'.MemSize() > pos as nat + 31
-    ensures s'.yul.context == s.yul.context
-    ensures s'.yul.world == s.yul.world
+    ensures s'.Context() == s.Context()
+    ensures s'.World() == s.World()
     ensures Memory.ReadUint256(s'.yul.memory, pos as nat) == value
   {
     var k := cleanup_t_uint256(value);
@@ -234,7 +234,7 @@ module ERC20 {
     ensures tail == headStart + 32
     ensures headStart as nat + 31 < s'.MemSize()
     ensures Memory.ReadUint256(s'.yul.memory, headStart as nat) == value0
-    ensures s'.yul.world == s.yul.world
+    ensures s'.World() == s.World()
   {
     tail := Add(headStart, 32);
     s' := abi_encode_t_uint256_to_t_uint256_fromStack(value0,  Add(headStart, 0), s);
@@ -248,7 +248,7 @@ module ERC20 {
     ensures s'.ERROR? || s'.RETURNS?
     ensures s'.RETURNS? ==> |s'.data| == 32
     ensures s'.RETURNS? ==> ByteUtils.ReadUint256(s'.data, 0) == s.SLoad(0)
-    ensures s'.RETURNS? ==> s'.world == s.yul.world
+    ensures s'.RETURNS? ==> s'.world == s.World()
   {
     if CallValue(s) > 0 {
       //  Not payable
@@ -282,7 +282,7 @@ module ERC20 {
 
   method abi_decode_t_uint256(offset: u256, end: u256, s: Executing) returns (value: u256, s': State)
     ensures s' == s
-    ensures offset < CallDataSize(s) ==> value == s.yul.context.CallDataRead(offset) == ByteUtils.ReadUint256(s.yul.context.callData, offset as nat)
+    ensures offset < CallDataSize(s) ==> value == s.Context().CallDataRead(offset) == ByteUtils.ReadUint256(s.Context().callData, offset as nat)
   {
     value := CallDataLoad(offset, s);
     s' := validator_revert_t_uint256(value, s);
@@ -294,7 +294,7 @@ module ERC20 {
     ensures dataEnd as int - headStart as int >= 32 ==> s'.EXECUTING?
     ensures dataEnd as int - headStart as int < 32 ==> s'.ERROR?
     ensures s'.EXECUTING? ==> s' == s
-    ensures s'.EXECUTING? ==> value0 == ByteUtils.ReadUint256(s.yul.context.callData, headStart as nat)
+    ensures s'.EXECUTING? ==> value0 == ByteUtils.ReadUint256(s.Context().callData, headStart as nat)
   {
     if SLt(Sub(dataEnd, headStart), 32) {
       s' := revert_error_dbdddcbe895c83990c08b3492a0e83918d802a52331272ac6fdb6a7c4aea3b1b(s);
@@ -304,7 +304,7 @@ module ERC20 {
     {
       var offset := 0;
       value0, s' := abi_decode_t_uint256(Add(headStart, offset), dataEnd, s);
-      assert value0 == s.yul.context.CallDataRead(headStart) == ByteUtils.ReadUint256(s.yul.context.callData, headStart as nat);
+      assert value0 == s.Context().CallDataRead(headStart) == ByteUtils.ReadUint256(s.Context().callData, headStart as nat);
     }
 
   }
@@ -321,11 +321,11 @@ module ERC20 {
   method external_fun_mint_13(s: Executing) returns (s': State)
     requires 4 <= CallDataSize(s) as nat < TWO_255 - 1
     ensures CallDataSize(s) < 36 || CallValue(s) > 0 ==> s'.ERROR?
-    ensures CallDataSize(s) >= 36 && (s.SLoad(0) as nat + ByteUtils.ReadUint256(s.yul.context.callData, 4) as nat) >= TWO_256 ==> s'.ERROR?
-    ensures CallDataSize(s) >= 36 && CallValue(s) == 0 && (s.SLoad(0) as nat + ByteUtils.ReadUint256(s.yul.context.callData, 4) as nat) < TWO_256 ==> s'.RETURNS?
+    ensures CallDataSize(s) >= 36 && (s.SLoad(0) as nat + ByteUtils.ReadUint256(s.Context().callData, 4) as nat) >= TWO_256 ==> s'.ERROR?
+    ensures CallDataSize(s) >= 36 && CallValue(s) == 0 && (s.SLoad(0) as nat + ByteUtils.ReadUint256(s.Context().callData, 4) as nat) < TWO_256 ==> s'.RETURNS?
     ensures s'.RETURNS? || s'.ERROR?
-    ensures s'.RETURNS? ==> s'.world.accounts.Keys == s.yul.world.accounts.Keys
-    ensures s'.RETURNS? ==> Storage.Read(s'.world.accounts[s.yul.context.address].storage, 0) ==  s.SLoad(0) + CallDataLoad(4, s)
+    ensures s'.RETURNS? ==> s'.world.accounts.Keys == s.Accounts().Keys
+    ensures s'.RETURNS? ==> Storage.Read(s'.world.accounts[s.Context().address].storage, 0) ==  s.SLoad(0) + CallDataLoad(4, s)
   {
     if CallValue(s) > 0 {
       //  Not payable, revert
@@ -467,8 +467,8 @@ module ERC20 {
   method fun_mint_13(var_amount_5: u256, s: Executing) returns (s': State)
     ensures s'.EXECUTING? <==> s.SLoad(0) as nat + var_amount_5 as nat < TWO_256
     ensures s'.EXECUTING? ==> s'.SLoad(0) == s.SLoad(0) + var_amount_5
-    ensures s'.EXECUTING? ==> s'.yul.world.accounts.Keys == s.yul.world.accounts.Keys
-    ensures s'.EXECUTING? ==> s'.yul.context == s.yul.context
+    ensures s'.EXECUTING? ==> s'.Accounts().Keys == s.Accounts().Keys
+    ensures s'.EXECUTING? ==> s'.Context() == s.Context()
     ensures s'.ERROR? || s'.EXECUTING?
   {
     /// @src 0:1314:1320  "amount"
