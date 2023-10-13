@@ -101,12 +101,12 @@ module ERC20 {
           return;
         }
 
-      case _ => return Revert(0, 0, s1);
+      case _ => 
 
     }
     //  Here we should revert as the calldataload does not have enough bytes.
-    assert CallDataSize(s1) < 4;
-    return Revert(0, 0, s1);
+    assert CallDataSize(s1) < 4 || (Selector(s1) != TotalSupplySelector && Selector(s1) != MintSelector) ;
+    return revert_error_42b3090547df1d2001c96683413b8cf91c1b902ef5e3cb8d9f6f304cf7446f74(s1);
   }
 
   /** Get leftmost 4-bytes of a u256. */
