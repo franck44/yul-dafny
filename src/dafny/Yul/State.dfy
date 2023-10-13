@@ -77,6 +77,27 @@ module YulState {
     | RETURNS(data: Array<u8> := [], world: WorldState.T)
 
   {
+    //  Helpers
+
+    /**
+      *  Get world.
+      */
+    function World(): WorldState.T
+      requires this.EXECUTING? || this.RETURNS?
+    {
+        if this.EXECUTING? then this.yul.world
+        else this.world
+    }
+
+    /**
+      *  Get context.
+      */
+    function Context(): Context.T
+      requires this.EXECUTING?
+    {
+      this.yul.context
+    }
+
     //  Memory helpers.
 
     /**
@@ -86,6 +107,12 @@ module YulState {
       requires this.EXECUTING?
     {
       Memory.Size(this.yul.memory)
+    }
+
+    function GetMem(): Memory.T
+      requires this.EXECUTING?
+    {
+      this.yul.memory
     }
 
     /**
