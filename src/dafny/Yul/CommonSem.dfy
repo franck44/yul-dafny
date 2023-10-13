@@ -96,7 +96,7 @@ module CommonSem {
     *   Signed greater than.
     *   @param      x   
     *   @param      y 
-    *   @returns    x as int >  y as int and 0 otherwise.
+    *   @returns    x as int >  y as int.
     */
   function SGt(x: u256, y: u256): bool
   {
@@ -129,7 +129,7 @@ module CommonSem {
   //    Bitwise operators
 
   /**
-    *   Bitwise not
+    *   Bitwise negation.
     *   @param      x    
     *   @returns    not(x), every bit is flipped.
     */
@@ -140,7 +140,7 @@ module CommonSem {
   }
 
   /**
-    *   Bitwise And
+    *   Bitwise And.
     *   @param      x    
     *   @param      y    
     *   @returns    x && y
@@ -160,7 +160,7 @@ module CommonSem {
   }
 
   /**
-    *   Bitwise Or
+    *   Bitwise Or.
     *   @param      x    
     *   @param      y    
     *   @returns    x || y
@@ -171,7 +171,7 @@ module CommonSem {
   }
 
   /**
-    * Right shift operation.
+    * Right shift.
     */
   function Shr(value: u256, shift: u256): u256
     ensures shift == 0 ==> Shr(value, shift) == value
@@ -180,7 +180,7 @@ module CommonSem {
   }
 
   /**
-    * Left shift operation.
+    * Left shift.
     */
   function Shl(value: u256, shift: u256): u256
     ensures shift == 0 ==> Shl(value, shift) == value
@@ -235,8 +235,8 @@ module CommonSem {
     *
     *   @param      address The start address.
     *   @param      value   Value to store.
-    *   @param      m       The memory before store operation.
-    *   @returns    m[address..address + 31] <- value.
+    *   @param      s       The state before the store operation.
+    *   @returns            The new state with memory updated to m[address..address + 31] <- value.
     *
     *   @note       Memory is a word-addressable array of bytes. A u256 value
     *               is stored into 32 bytes ranging from address to address + 31.
