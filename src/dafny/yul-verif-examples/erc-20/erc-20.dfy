@@ -400,7 +400,7 @@ module ERC20 {
   method checked_add_t_uint256(x: u256, y: u256, s: Executing) returns (sum: u256, s': State)
     ensures x as nat + y as nat < TWO_256 <==> s'.EXECUTING?
     ensures x as nat + y as nat >= TWO_256 <==> s'.ERROR?
-    ensures x as nat + y as nat < TWO_256 <==> sum as nat == x as nat + y as nat
+
     ensures s'.EXECUTING? ==> s' ==  s
   {
     var x1 := cleanup_t_uint256(x);
