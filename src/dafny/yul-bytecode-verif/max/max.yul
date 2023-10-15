@@ -17,6 +17,6 @@ object "Runtime" {
   let z := max(x, y)
 
   mstore(0x40, z)
-      
+  return(0x40, 32)
   }
 }
