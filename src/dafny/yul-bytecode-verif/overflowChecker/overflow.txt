@@ -1,0 +1,84 @@
+
+======= src/dafny/yul-bytecode-verif/overflowChecker/overflow.yul (EVM) =======
+
+Pretty printed source:
+object "Runtime" {
+    code {
+        {
+            let x := 8
+            let y := 56
+            pop(checked_add_uint256(x, y))
+        }
+        function checked_add_uint256(x, y) -> sum
+        {
+            sum := add(x, y)
+            if gt(x, sum) { revert(0, 0) }
+        }
+    }
+}
+
+
+Binary representation:
+600a6008603890600c565b005b91908201809211601857565b5f80fd
+
+Text representation:
+    /* "src/dafny/yul-bytecode-verif/overflowChecker/overflow.yul":224:251   */
+  tag_2
+    /* "src/dafny/yul-bytecode-verif/overflowChecker/overflow.yul":185:186   */
+  0x08
+    /* "src/dafny/yul-bytecode-verif/overflowChecker/overflow.yul":204:206   */
+  0x38
+    /* "src/dafny/yul-bytecode-verif/overflowChecker/overflow.yul":224:251   */
+  swap1
+  tag_1
+  jump	// in
+tag_2:
+    /* "src/dafny/yul-bytecode-verif/overflowChecker/overflow.yul":215:251   */
+  stop
+    /* "src/dafny/yul-bytecode-verif/overflowChecker/overflow.yul":39:166   */
+tag_1:
+  swap2
+  swap1
+    /* "src/dafny/yul-bytecode-verif/overflowChecker/overflow.yul":104:113   */
+  dup3
+  add
+    /* "src/dafny/yul-bytecode-verif/overflowChecker/overflow.yul":129:139   */
+  dup1
+  swap3
+  gt
+    /* "src/dafny/yul-bytecode-verif/overflowChecker/overflow.yul":126:156   */
+  tag_3
+  jumpi
+    /* "src/dafny/yul-bytecode-verif/overflowChecker/overflow.yul":39:166   */
+  jump	// out
+    /* "src/dafny/yul-bytecode-verif/overflowChecker/overflow.yul":140:156   */
+tag_3:
+    /* "src/dafny/yul-bytecode-verif/overflowChecker/overflow.yul":152:153   */
+  0x00
+    /* "src/dafny/yul-bytecode-verif/overflowChecker/overflow.yul":142:154   */
+  dup1
+  revert
+
+00000000: PUSH1 0xa
+00000002: PUSH1 0x8
+00000004: PUSH1 0x38
+00000006: SWAP1
+00000007: PUSH1 0xc
+00000009: JUMP
+0000000a: JUMPDEST
+0000000b: STOP
+0000000c: JUMPDEST
+0000000d: SWAP2
+0000000e: SWAP1
+0000000f: DUP3
+00000010: ADD
+00000011: DUP1
+00000012: SWAP3
+00000013: GT
+00000014: PUSH1 0x18
+00000016: JUMPI
+00000017: JUMP
+00000018: JUMPDEST
+00000019: PUSH0
+0000001a: DUP1
+0000001b: REVERT
