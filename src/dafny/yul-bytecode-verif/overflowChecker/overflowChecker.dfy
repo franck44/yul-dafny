@@ -32,7 +32,10 @@ module OverflowChecker {
   {    // thanks Dafny
   }
 
-
+    /**
+     *  Overfloe checker as generated bh the Solidity compiler.
+     *  `clean-up` calls have been removed.
+     */
   method checked_add_t_uint256(x: u256, y: u256, s: Executing) returns (sum: u256, s': State)
 
     /** if no overflow we get normal state s'. */
