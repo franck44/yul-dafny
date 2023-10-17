@@ -115,4 +115,5 @@ The [examples folder](src/dafny/yul-verif-examples) contains examples of Yul to 
 - [Yul specification in Lean](https://github.com/NethermindEth/Yul-Specification)
 - [Yul specification in K](https://github.com/ethereum/Yul-K/tree/master)
 - [Yul specification in Isabelle](https://github.com/mmalvarez/Yul-Isabelle)
+- [Yul in ACL2](https://github.com/acl2/acl2/tree/master/books/kestrel/yul/language)
 - [An EVM in Dafny (Dafny-EVM)](https://github.com/Consensys/evm-dafny)
