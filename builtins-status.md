@@ -1,6 +1,7 @@
 
 
 The following table of builtins is available for the  [EVM dialect](https://docs.soliditylang.org/en/latest/yul.html#evm-dialect) of Yul.
+We have added the current status _supported_, :white_check_mark:, or _not supported_, :red_circle:.
 
 
 | Supported       | Instruction           | Description |
