@@ -106,7 +106,7 @@ module OverFlowCheckerBytecode {
     ensures s'.Operands() == st.Operands() - 1
     ensures s'.Peek(0) == st.Peek(2)
     ensures s'.Peek(1) as nat == (st.Peek(0) as nat + st.Peek(1) as nat) % TWO_256
-    ensures s'.PC() == if st.Peek(0) > ((st.Peek(0) as nat + st.Peek(1) as nat) % TWO_256) as u256 then tag_3 as nat else 0x17 as nat
+    ensures s'.PC() == if st.Peek(0) > ((st.Peek(0) as nat + st.Peek(1) as nat) % TWO_256) as u256 then tag_3 as nat else tag_4 as nat
   {
     /*
     0000000c: JUMPDEST      //  tag_1
