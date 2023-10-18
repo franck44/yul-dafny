@@ -402,6 +402,7 @@ module ERC20 {
     ensures x as nat + y as nat >= TWO_256 <==> s'.ERROR?
 
     ensures s'.EXECUTING? ==> s' ==  s
+    ensures s'.EXECUTING? ==> sum == x + y 
   {
     var x1 := cleanup_t_uint256(x);
     var y1 := cleanup_t_uint256(y);
@@ -476,7 +477,6 @@ module ERC20 {
     var expr_9 := v_1;
     /// @src 0:1299:1320  "totalSupply += amount"
     var v_2 := read_from_storage_split_offset_0_t_uint256(0x00, s);
-    assert v_2 == s.SLoad(0x00);
     var expr_10, s1 := checked_add_t_uint256(v_2, expr_9, s);
     if s1.ERROR? {
         return s1;
