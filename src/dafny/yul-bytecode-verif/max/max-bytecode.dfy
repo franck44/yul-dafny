@@ -114,7 +114,8 @@ module MaxBytecode {
   }
 
   /**
-    * Code staring at tag_1
+    * Code staring at tag_1.
+    * Code of the max function.
     */
   function ExecuteFromTag1(st: EvmState.ExecutingState): (s': EvmState.State)
     requires st.Capacity() >= 2
