@@ -211,6 +211,12 @@ module CommonFunctions {
     Shl(value, 0)
   }
 
+  function shift_left_dynamic(bits: u256, value: u256): (newValue: u256)
+    ensures bits == 0 ==> newValue == value == shift_left_0(value)
+  {
+    Shl(value, bits)
+  }
+
   //  Cleanup functions
 
   /**
