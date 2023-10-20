@@ -200,7 +200,7 @@ module CommonSem {
   function Keccak256(loc: u256, len: u256, s: Executing): u256
     requires len > 0
     /** Enforce constraint on memory size and slice to read. */
-    requires loc as nat + len as nat < s.MemSize()
+    requires loc as nat + len as nat <= s.MemSize()
   {
     //  get len bytes from loc and possibly extend memory
     var bytes := Memory.Slice(s.GetMem(), loc as nat, len as nat);
@@ -245,6 +245,7 @@ module CommonSem {
   function MStore(address: u256, value: u256, s: Executing): (s': State)
     ensures s'.EXECUTING?
     ensures s'.MemSize() > address as nat + 31
+    ensures s.MemSize() > address as nat + 31 ==> s'.MemSize() == s.MemSize()
     ensures s'.Context() == s.Context()
     ensures s'.World() == s.World()
   {
