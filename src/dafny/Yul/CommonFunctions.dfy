@@ -424,5 +424,27 @@ module CommonFunctions {
     Or(value_, And(toInsert_, mask))
   }
 
+  /**
+    *  @param  value       A slot number?
+    *  @param  shiftBytes  ??
+    *  @param  toInsert_   ??
+    *  @returns            ?? 
+    */
+  function {:opaque} update_byte_slice_dynamic32(value: u256, shiftBytes: u256, toInsert: u256): (result: u256)
+    requires shiftBytes as nat * 8 < TWO_256
+    ensures shiftBytes == 0 ==> result == toInsert
+  {
+    var shiftBits := Mul(shiftBytes, 8);
+    var mask := shift_left_dynamic(shiftBits, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff);
+    assert shiftBytes == 0 ==> mask == 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
+    var toInsert_ := shift_left_dynamic(shiftBits, toInsert);
+    assert shiftBytes == 0 ==> toInsert_ == toInsert;
+    var value_ := And(value, Not(mask));
+    assert shiftBytes == 0 ==> value_ == 0;
+    assert shiftBytes == 0 ==> And(toInsert_, mask) == toInsert;
+    assert shiftBytes == 0 ==> Or(value_, And(toInsert_, mask)) == toInsert;
+    Or(value_, And(toInsert_, mask))
+  }
+
 }
 
