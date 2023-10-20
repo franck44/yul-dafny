@@ -305,6 +305,79 @@ module CommonFunctions {
     SStore(slot, update_byte_slice_32_shift_0(SLoad(slot, s), prepare_store_t_uint256(convertedValue_0)), s)
   }
 
+  /**
+    *  
+    *   @param  slot    The slot to update.
+    *   @param  offset  ??
+    *   @param  value_0 The value to store at slot?
+    8   @returns        The storage slot updated with value value_0. 
+    */
+  function update_storage_value_t_uint256_to_t_uint256(slot: u256, offset: u256, value_0: u256, s: Executing): (s': State)
+    requires offset as nat * 8 < TWO_256
+  {
+    var convertedValue_0 := convert_t_uint256_to_t_uint256(value_0);
+    SStore(slot, update_byte_slice_dynamic32(SLoad(slot, s), offset, prepare_store_t_uint256(convertedValue_0)), s)
+  }
+
+  //  Arrays
+
+  /**
+    *    Length of an array.
+    *    @param  value   The slot where the dynamic array's length is stored.
+    *    @returns        The content of the slot which is the length of the array.
+    */
+  function array_length_t_array_t_uint256_dyn_storage(value: u256, s: Executing): (length: u256)
+  {
+    s.SLoad(value)
+  }
+
+  /**
+    *   First slot of an array of uint256.
+    *   @param  ptr The slot number of the array, where the length is stored.
+    *   @returns    The slot of the first element of the array (index 0).
+    */
+  method array_dataslot_t_array_t_uint256_dyn_storage(ptr: u256, s: Executing) returns (data: u256, s': State)
+    ensures s'.EXECUTING?
+    ensures s.MemSize() > 31 ==> s'.MemSize() == s.MemSize()
+  {
+    data := ptr;
+    s' := MStore(0, ptr, s);
+    assert 0 + 31 < s'.MemSize();
+    data := Keccak256(0, 0x20, s');
+  }
+
+  method array_dataslot_t_array_t_uint256_dyn_storage_(ptr: u256, s: Executing) returns (data: u256, slot: Slot, s': State)
+    ensures s'.EXECUTING?
+    ensures s.MemSize() > 31 ==> s'.MemSize() == s.MemSize()
+  {
+    data := ptr;
+    s' := MStore(0, ptr, s);
+    assert 0 + 31 < s'.MemSize();
+    data := Keccak256(0, 0x20, s');
+    // slot := DynArraySlot(ptr);
+  }
+
+  /**
+    *  @note   The computation of the slot does not seem to check for overflow, so we use YulSem.Add, that 
+    *          wraps around.
+    */
+  method storage_array_index_access_t_array_t_uint256_dyn_storage(array_ : u256, index: u256, s: Executing) returns (slot: u256, offset: u256, s': State)
+    ensures index < s.SLoad(array_) <==> s'.EXECUTING?
+    ensures index >= s.SLoad(array_) <==> s'.ERROR?
+    ensures offset == 0
+  {
+    var arrayLength := array_length_t_array_t_uint256_dyn_storage(array_, s);
+    if !Lt(index, arrayLength) {
+      s' := panic_error_0x32(s);
+      offset := 0;
+      return;
+    }
+    var dataArea, s1 := array_dataslot_t_array_t_uint256_dyn_storage(array_, s);
+    s' := s1;
+    slot := YulSem.Add(dataArea, Mul(index, 1));
+    offset := 0;
+  }
+
   //  Misc.
 
   lemma NSCOverFlowU256(x: u256, y: u256)
