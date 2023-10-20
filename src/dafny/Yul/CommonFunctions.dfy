@@ -148,6 +148,32 @@ module CommonFunctions {
     }
   }
 
+  method abi_decode_tuple_t_uint256t_uint256(headStart: u256, dataEnd: u256, s: Executing) returns (value0: u256, value1: u256, s': State)
+    requires -TWO_255 <= dataEnd as int - headStart as int < TWO_255
+    requires headStart <= dataEnd <= CallDataSize(s)
+    ensures dataEnd as int - headStart as int >= 64 ==> s'.EXECUTING?
+    ensures dataEnd as int - headStart as int < 64 ==> s'.ERROR?
+    ensures s'.EXECUTING? ==> s' == s
+    ensures s'.EXECUTING? ==> value0 == ByteUtils.ReadUint256(s.Context().callData, headStart as nat)
+    ensures s'.EXECUTING? ==> value1 == ByteUtils.ReadUint256(s.Context().callData, headStart as nat + 32)
+  {
+    if SLt(Sub(dataEnd, headStart), 64) {
+      s' := revert_error_dbdddcbe895c83990c08b3492a0e83918d802a52331272ac6fdb6a7c4aea3b1b(s);
+      value0, value1 := 0, 0;
+      return;
+    }
+    {
+      var offset := 0;
+      value0, s' := abi_decode_t_uint256(Add(headStart, offset), dataEnd, s);
+      assert value0 == s.Context().CallDataRead(headStart) == ByteUtils.ReadUint256(s.Context().callData, headStart as nat);
+    }
+    {
+      var offset := 32;
+      value1, s' := abi_decode_t_uint256(Add(headStart, offset), dataEnd, s);
+      assert value1 == s.Context().CallDataRead(headStart + 32) == ByteUtils.ReadUint256(s.Context().callData, headStart as nat + 32);
+    }
+  }
+
   function {:opaque} abi_encode_tuple__to__fromStack(headStart: u256): (tail: u256)
     ensures tail == headStart
   {
