@@ -64,6 +64,12 @@ module CommonFunctions {
     Revert(0, 0x24, s2)
   }
 
+  function panic_error_0x32(s: Executing): (s': State) {
+    var s1 := MStore(0, 35408467139433450592217433187231851964531694900788300625387963629091585785856, s);
+    var s2 := MStore(4, 0x32, s1);
+    Revert(0, 0x24, s2)
+  }
+
   //  abi_ functions
 
   /**
