@@ -39,7 +39,7 @@ if(project.hasProperty("randomize")) {
 
 def DAFNY_HOME = System.env.'DAFNY_HOME'
 // Configure Z3_PATH based on DAFNY_HOME
-def Z3_PATH = DAFNY_HOME != null ? DAFNY_HOME + "/z3/bin/z3-4.8.5" : null
+def Z3_PATH = DAFNY_HOME != null ? DAFNY_HOME + "/z3/bin/z3-4.12.1" : null
 
 if(project.hasProperty("solver-path")) {
   Z3_PATH = project.properties["solver-path"]
@@ -72,14 +72,16 @@ final DAFNY4_BUILD_FLAGS = [
 ]
 
 final DAFNY4_VERIFY_FLAGS = [
-    'verify',
-    '--resource-limit','10000000',
+    '/dafnyVerify:1',
+    '/compile:0',
+    '/rlimit:10000000',
+    // '--resource-limit','10000000',
     // '--verify-included-files',
     // '--log-format','csv;LogFileName=build/logs/verify.csv',
-    '--relax-definite-assignment',
-    '--function-syntax','4',
-    '--quantifier-syntax','4',
-    '--cores', '12',
+    // '--relax-definite-assignment',
+    // '--function-syntax','4',
+    // '--quantifier-syntax','4',
+    '/vcsCores:12', 
 ] 
 // + Z3_OPTION + BOOGIE_FLAGS
 
@@ -118,7 +120,8 @@ task verify {
             File file -> {
                 // Construct logging option
                 def name = file.name.take(file.name.lastIndexOf('.'))
-                def logging = '--log-format:csv;LogFileName=build/logs/' + name + '.csv'
+                // def logging = '--log-format:csv;LogFileName=build/logs/' + name + '.csv'
+                def logging = '/verificationLogger:csv;LogFileName=build/logs/' + name + '.csv'
                 // Run test
                 // project.logger.info('my info message')
                 project.logger.lifecycle('Verifying ' + [file])
